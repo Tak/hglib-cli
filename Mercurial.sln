@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mercurial", "Mercurial\Mercurial.csproj", "{FADE5BAA-E0A3-4B05-A121-CD33A90A76A9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{BC14E588-EA5B-4B87-8D86-E1D25EF29B18}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BC14E588-EA5B-4B87-8D86-E1D25EF29B18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC14E588-EA5B-4B87-8D86-E1D25EF29B18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC14E588-EA5B-4B87-8D86-E1D25EF29B18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC14E588-EA5B-4B87-8D86-E1D25EF29B18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FADE5BAA-E0A3-4B05-A121-CD33A90A76A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FADE5BAA-E0A3-4B05-A121-CD33A90A76A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FADE5BAA-E0A3-4B05-A121-CD33A90A76A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FADE5BAA-E0A3-4B05-A121-CD33A90A76A9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Mercurial\Mercurial.csproj
+	EndGlobalSection
+EndGlobal
