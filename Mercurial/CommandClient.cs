@@ -18,7 +18,7 @@ namespace Mercurial
 		
 		public string Encoding { get; private set; }
 		public IEnumerable<string> Capabilities { get; private set; }
-		public Dictionary<string,string> Configuration {
+		public IDictionary<string,string> Configuration {
 			get {
 				if (null != _configuration)
 					return _configuration;
@@ -40,7 +40,7 @@ namespace Mercurial
 		}
 		string _root;
 		
-		public CommandClient (string path, string encoding, Dictionary<string,string> configs)
+		public CommandClient (string path, string encoding, IDictionary<string,string> configs)
 		{
 			var arguments = new StringBuilder ("serve --cmdserver pipe ");
 			
@@ -120,6 +120,61 @@ namespace Mercurial
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error cloning to {0}", source));
 		}
 		
+		public void Add (IEnumerable<string> files)
+		{
+			Add (files, null, null, false, false);
+		}
+		
+		public void Add (IEnumerable<string> files, string includePattern, string excludePattern, bool recurseSubRepositories, bool dryRun)
+		{
+			if (null == files) files = new List<string> ();
+			var arguments = new List<string> (){ "add" };
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			AddArgumentIf (arguments, recurseSubRepositories, "--subrepos");
+			AddArgumentIf (arguments, dryRun, "--dry-run");
+			
+			arguments.AddRange (files);
+			
+			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error adding {0}", string.Join (" ", files.ToArray ())));
+		}
+		
+		public IDictionary<string,Status> Status (IEnumerable<string> files)
+		{
+			return Status (files, Mercurial.Status.Default, true, false, null, null, null, null, false);
+		}
+		
+		public IDictionary<string,Status> Status (IEnumerable<string> files, Status onlyFilesWithThisStatus, bool showStatusPrefix, bool showCopiedSources, string fromRevision, string onlyRevision, string includePattern, string excludePattern, bool recurseSubRepositories)
+		{
+			var arguments = new List<string> (){ "status" };
+			
+			if (Mercurial.Status.Default != onlyFilesWithThisStatus) {
+				arguments.Add (ArgumentForStatus (onlyFilesWithThisStatus));
+			}
+			AddArgumentIf (arguments, !showStatusPrefix, "--no-status");
+			AddArgumentIf (arguments, showCopiedSources, "--copies");
+			AddNonemptyStringArgument (arguments, fromRevision, "--rev");
+			AddNonemptyStringArgument (arguments, onlyRevision, "--change");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			AddArgumentIf (arguments, recurseSubRepositories, "--subrepos");
+			
+			if (null != files)
+				arguments.AddRange (files);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			ThrowOnFail (result, 0, "Error retrieving status");
+			
+			return result.Output.Split (new[]{"\n"}, StringSplitOptions.RemoveEmptyEntries).Aggregate (new Dictionary<string,Status> (), (dict,line) => {
+					if (2 < line.Length) {
+						dict [line.Substring (2)] = ParseStatus (line.Substring (0, 1));
+					}
+					return dict;
+				},
+				dict => dict
+			);
+		}
+		
 		#region Plumbing
 		
 		public void Handshake ()
@@ -179,8 +234,8 @@ namespace Mercurial
 		}
 		
 		public int RunCommand (IList<string> command,
-		                       Dictionary<CommandChannel,Stream> outputs,
-		                       Dictionary<CommandChannel,Func<uint,byte[]>> inputs)
+		                       IDictionary<CommandChannel,Stream> outputs,
+		                       IDictionary<CommandChannel,Func<uint,byte[]>> inputs)
 		{
 			if (null == command || 0 == command.Count)
 				throw new ArgumentException ("Command must not be empty", "command");
@@ -232,7 +287,7 @@ namespace Mercurial
 		}
 		
 		public CommandResult GetCommandOutput (IList<string> command,
-		                                       Dictionary<CommandChannel,Func<uint,byte[]>> inputs)
+		                                       IDictionary<CommandChannel,Func<uint,byte[]>> inputs)
 		{
 			MemoryStream output = new MemoryStream ();
 			MemoryStream error = new MemoryStream ();
@@ -373,6 +428,55 @@ namespace Mercurial
 			}
 			return result;
 		}
+		
+		static string ArgumentForStatus (Mercurial.Status status)
+		{
+			switch (status) {
+			case Mercurial.Status.Added:
+				return "--added";
+			case Mercurial.Status.Clean:
+				return "--clean";
+			case Mercurial.Status.Ignored:
+				return "--ignored";
+			case Mercurial.Status.Modified:
+				return "--modified";
+			case Mercurial.Status.Removed:
+				return "--removed";
+			case Mercurial.Status.Unknown:
+				return "--unknown";
+			case Mercurial.Status.Missing:
+				return "--deleted";
+			case Mercurial.Status.All:
+				return "--all";
+			default:
+				return string.Empty;
+			}
+		}
+		
+		static Mercurial.Status ParseStatus (string input)
+		{
+			switch (input) {
+			case "M":
+				return Mercurial.Status.Modified;
+			case "A":
+				return Mercurial.Status.Added;
+			case "R":
+				return Mercurial.Status.Removed;
+			case "C":
+				return Mercurial.Status.Clean;
+			case "!":
+				return Mercurial.Status.Missing;
+			case "?":
+				return Mercurial.Status.Unknown;
+			case "I":
+				return Mercurial.Status.Ignored;
+			case " ":
+				return Mercurial.Status.Origin;
+			default:
+				return Mercurial.Status.Clean; // ?
+			}
+		}
+		
 		#endregion
 	}
 }
