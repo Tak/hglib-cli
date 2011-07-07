@@ -76,17 +76,31 @@ namespace Mercurial
 			Handshake ();
 		}
 		
-		public void Initialize (string destination)
+		public static void Initialize (string destination)
+		{
+			using (var client = new CommandClient (null, null, null)) {
+				client.InitializeInternal (destination);
+			}
+		}
+		
+		internal void InitializeInternal (string destination)
 		{
 			ThrowOnFail (GetCommandOutput (new[]{ "init", destination }, null), 0, "Error initializing repository");
 		}
 		
-		public void Clone (string source, string destination)
+		public static void Clone (string source, string destination)
 		{
 			Clone (source, destination, true, null, null, null, false, true);
 		}
 		
-		public void Clone (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData)
+		public static void Clone (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData)
+		{
+			using (var client = new CommandClient (null, null, null)) {
+				client.CloneInternal (source, destination, updateWorkingCopy, updateToRevision, cloneToRevision, onlyCloneBranch, forcePullProtocol, compressData);
+			}
+		}
+
+		internal void CloneInternal (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData)
 		{
 			if (string.IsNullOrEmpty (source)) 
 				throw new ArgumentException ("Source must not be empty.", "source");
