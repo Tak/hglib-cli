@@ -229,6 +229,8 @@ namespace Mercurial
 				                              fromDate.ToString ("yyyy-MM-dd HH:mm:ss"),
 				                              toDate.ToString ("yyyy-MM-dd HH:mm:ss")));
 			}
+			if (null != files)
+				arguments.AddRange (files);
 			
 			CommandResult result = GetCommandOutput (arguments, null);
 			ThrowOnFail (result, 0, "Error getting log");
@@ -247,6 +249,35 @@ namespace Mercurial
 			}
 			
 			return revisions;
+		}
+		
+		public string Annotate (string revision, params string[] files)
+		{
+			return Annotate (revision, files, true, false, true, false, false, true, false, false, null, null);
+		}
+		
+		public string Annotate (string revision, IEnumerable<string> files, bool followCopies, bool annotateBinaries, bool showAuthor, bool showFilename, bool showDate, bool showRevision, bool showChangeset, bool showLine, string includePattern, string excludePattern)
+		{
+			List<string > arguments = new List<string> (){ "annotate" };
+			
+			AddNonemptyStringArgument (arguments, revision, "--rev");
+			AddArgumentIf (arguments, !followCopies, "--no-follow");
+			AddArgumentIf (arguments, annotateBinaries, "--text");
+			AddArgumentIf (arguments, showAuthor, "--user");
+			AddArgumentIf (arguments, showFilename, "--file");
+			AddArgumentIf (arguments, showDate, "--date");
+			AddArgumentIf (arguments, showRevision, "--number");
+			AddArgumentIf (arguments, showChangeset, "--changeset");
+			AddArgumentIf (arguments, showLine, "--line-number");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			
+			if (null != files) arguments.AddRange (files);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			ThrowOnFail (result, 0, "Error annotating");
+			
+			return result.Output;
 		}
 		
 		#region Plumbing

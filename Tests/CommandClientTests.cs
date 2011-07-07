@@ -114,6 +114,21 @@ namespace Mercurial.Tests
 				Assert.AreEqual (2, client.Log (null).Count, "Unexpected revision count");
 			}
 		}
+		
+		[Test]
+		public void TestAnnotate ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			CommandClient.Initialize (path);
+			
+			using (var client = new CommandClient (path, null, null)) {
+				File.WriteAllText (file, "1");
+				client.Add (file);
+				client.Commit ("1", null, false, false, null, null, null, DateTime.MinValue, "user");
+				Assert.AreEqual ("user 0: 1", client.Annotate (null, file));
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{
