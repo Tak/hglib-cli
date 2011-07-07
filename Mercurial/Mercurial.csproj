@@ -40,7 +40,6 @@
     <Compile Include="ServerException.cs" />
     <Compile Include="CommandChannel.cs" />
     <Compile Include="CommandMessage.cs" />
-    <Compile Include="ResponseException.cs" />
     <Compile Include="CommandResult.cs" />
     <Compile Include="CommandException.cs" />
     <Compile Include="Status.cs" />
