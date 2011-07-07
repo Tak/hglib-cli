@@ -12,6 +12,8 @@ namespace Mercurial.Tests
 	[TestFixture()]
 	public class CommandClientTests
 	{
+		static readonly string TestRepo = "http://selenic.com/hg";
+		
 		[Test]
 		public void TestConnection ()
 		{
@@ -25,7 +27,8 @@ namespace Mercurial.Tests
 			using (CommandClient client = new CommandClient (null, null, null)) {
 				Dictionary<string,string > config = client.Configuration;
 				Assert.IsNotNull (config);
-				Console.WriteLine (config.Aggregate (new StringBuilder (), (s,pair) => s.AppendFormat ("{0} = {1}\n", pair.Key, pair.Value), s => s.ToString ()));
+				Assert.Greater (config.Count, 0, "Expecting nonempty configuration");
+				// Console.WriteLine (config.Aggregate (new StringBuilder (), (s,pair) => s.AppendFormat ("{0} = {1}\n", pair.Key, pair.Value), s => s.ToString ()));
 			}
 		}
 		
@@ -51,6 +54,17 @@ namespace Mercurial.Tests
 			
 			using (var rootedClient = new CommandClient (path, null, null)) {
 				Assert.AreEqual (path, rootedClient.Root, "Unexpected repository root");
+			}
+		}
+		
+		[Test]
+		public void TestCloneRemote ()
+		{
+			string path = GetTemporaryPath ();
+			
+			using (var client = new CommandClient (null, null, null)) {
+				client.Clone (TestRepo, path, true, null, "10", null, false, true);
+				Assert.That (Directory.Exists (Path.Combine (path, ".hg")), string.Format ("Repository was not cloned from {0} to {1}", TestRepo, path));
 			}
 		}
 

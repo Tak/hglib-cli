@@ -78,10 +78,32 @@ namespace Mercurial
 		
 		public void Initialize (string destination)
 		{
-			CommandResult result = GetCommandOutput (new[]{ "init", destination }, null);
-			if (0 != result.Result) {
-				throw new CommandException ("Error initializing repository", result);
-			}
+			ThrowOnFail (GetCommandOutput (new[]{ "init", destination }, null), 0, "Error initializing repository");
+		}
+		
+		public void Clone (string source, string destination)
+		{
+			Clone (source, destination, true, null, null, null, false, true);
+		}
+		
+		public void Clone (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData)
+		{
+			if (string.IsNullOrEmpty (source)) 
+				throw new ArgumentException ("Source must not be empty.", "source");
+			
+			var arguments = new List<string> (){ "clone" };
+			AddArgumentIf (arguments, !updateWorkingCopy, "--noupdate");
+			AddArgumentIf (arguments, forcePullProtocol, "--pull");
+			AddArgumentIf (arguments, !compressData, "--uncompressed");
+			
+			AddNonemptyStringArgument (arguments, updateToRevision, "--updaterev");
+			AddNonemptyStringArgument (arguments, cloneToRevision, "--rev");
+			AddNonemptyStringArgument (arguments, onlyCloneBranch, "--branch");
+			
+			arguments.Add (source);
+			AddArgumentIf (arguments, !string.IsNullOrEmpty (destination), destination);
+			
+			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error cloning to {0}", source));
 		}
 		
 		#region Plumbing
@@ -315,6 +337,28 @@ namespace Mercurial
 			return headers;
 		}
 		
+
+		static void AddArgumentIf (IList<string> arguments, bool condition, string argument)
+		{
+			if (condition) arguments.Add (argument);
+		}
+		
+
+		static void AddNonemptyStringArgument (IList<string> arguments, string argument, string argumentPrefix)
+		{
+			if (!string.IsNullOrEmpty (argument)) {
+				arguments.Add (argumentPrefix);
+				arguments.Add (argument);
+			}
+		}
+
+		CommandResult ThrowOnFail (CommandResult result, int expectedResult, string failureMessage)
+		{
+			if (expectedResult != result.Result) {
+				throw new CommandException (failureMessage, result);
+			}
+			return result;
+		}
 		#endregion
 	}
 }
