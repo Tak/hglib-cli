@@ -472,7 +472,7 @@ namespace Mercurial
 		
 		#region Plumbing
 		
-		public void Handshake ()
+		void Handshake ()
 		{
 			CommandMessage handshake = ReadMessage ();
 			Dictionary<string,string > headers = ParseDictionary (handshake.Message, new[]{": "});
@@ -485,7 +485,7 @@ namespace Mercurial
 			Capabilities = headers ["capabilities"].Split (new[]{" "}, StringSplitOptions.RemoveEmptyEntries);
 		}
 
-		public CommandMessage ReadMessage ()
+		CommandMessage ReadMessage ()
 		{
 			byte[] header = new byte[MercurialHeaderLength];
 			int bytesRead = 0;
@@ -597,7 +597,7 @@ namespace Mercurial
 			                          result);
 		}
 		
-		public void Close ()
+		void Close ()
 		{
 			if (null != commandServer) 
 				commandServer.Close ();
@@ -605,17 +605,19 @@ namespace Mercurial
 		}
 
 		#region IDisposable implementation
+		
 		public void Dispose ()
 		{
 			Close ();
 		}
+		
 		#endregion		
 		
 		#endregion
 		
 		#region Utility
 		
-		public static int ReadInt (byte[] buffer, int offset)
+		internal static int ReadInt (byte[] buffer, int offset)
 		{
 			if (null == buffer) throw new ArgumentNullException ("buffer");
 			if (buffer.Length < offset + 4) throw new ArgumentOutOfRangeException ("offset");
@@ -623,7 +625,7 @@ namespace Mercurial
 			return IPAddress.NetworkToHostOrder (BitConverter.ToInt32 (buffer, offset));
 		}
 		
-		public static uint ReadUint (byte[] buffer, int offset)
+		internal static uint ReadUint (byte[] buffer, int offset)
 		{
 			if (null == buffer)
 				throw new ArgumentNullException ("buffer");
@@ -633,7 +635,7 @@ namespace Mercurial
 			return (uint)IPAddress.NetworkToHostOrder (BitConverter.ToInt32 (buffer, offset));
 		}
 		
-		public static CommandChannel CommandChannelFromFirstByte (byte[] header)
+		internal static CommandChannel CommandChannelFromFirstByte (byte[] header)
 		{
 			char[] identifier = ASCIIEncoding.ASCII.GetChars (header, 0, 1);
 			
@@ -655,7 +657,7 @@ namespace Mercurial
 			}
 		}
 		
-		public static byte CommandChannelToByte (CommandChannel channel)
+		internal static byte CommandChannelToByte (CommandChannel channel)
 		{
 			string identifier;
 			
@@ -686,7 +688,7 @@ namespace Mercurial
 			return bytes[0];
 		}
 		
-		static Dictionary<string,string> ParseDictionary (string input, string[] delimiters)
+		internal static Dictionary<string,string> ParseDictionary (string input, string[] delimiters)
 		{
 			Dictionary<string,string > headers = input.Split ('\n')
 				.Aggregate (new Dictionary<string,string> (),
@@ -702,13 +704,13 @@ namespace Mercurial
 		}
 		
 
-		static void AddArgumentIf (IList<string> arguments, bool condition, string argument)
+		internal static void AddArgumentIf (IList<string> arguments, bool condition, string argument)
 		{
 			if (condition) arguments.Add (argument);
 		}
 		
 
-		static void AddNonemptyStringArgument (IList<string> arguments, string argument, string argumentPrefix)
+		internal static void AddNonemptyStringArgument (IList<string> arguments, string argument, string argumentPrefix)
 		{
 			if (!string.IsNullOrEmpty (argument)) {
 				arguments.Add (argumentPrefix);
@@ -716,7 +718,7 @@ namespace Mercurial
 			}
 		}
 		
-		static void AddFormattedDateArgument (IList<string> arguments, DateTime date, string datePrefix)
+		internal static void AddFormattedDateArgument (IList<string> arguments, DateTime date, string datePrefix)
 		{
 			if (DateTime.MinValue != date) {
 				arguments.Add (datePrefix);
@@ -732,7 +734,7 @@ namespace Mercurial
 			return result;
 		}
 		
-		static string ArgumentForStatus (Mercurial.Status status)
+		internal static string ArgumentForStatus (Mercurial.Status status)
 		{
 			switch (status) {
 			case Mercurial.Status.Added:
@@ -756,7 +758,7 @@ namespace Mercurial
 			}
 		}
 		
-		static Mercurial.Status ParseStatus (string input)
+		public static Mercurial.Status ParseStatus (string input)
 		{
 			switch (input) {
 			case "M":
@@ -780,7 +782,7 @@ namespace Mercurial
 			}
 		}
 		
-		static IList<Revision> ParseRevisionsFromLog (string xmlText)
+		internal static IList<Revision> ParseRevisionsFromLog (string xmlText)
 		{
 			XmlDocument document = new XmlDocument ();
 			document.LoadXml (xmlText);

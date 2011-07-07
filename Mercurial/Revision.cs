@@ -18,7 +18,7 @@ namespace Mercurial
 			Message = message;
 		}
 		
-		public Revision (XmlNode node)
+		internal Revision (XmlNode node)
 		{
 			RevisionId = node.Attributes["revision"].Value;
 			Date = DateTime.Parse (node.SelectSingleNode ("date").InnerText);
