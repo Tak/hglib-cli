@@ -94,6 +94,24 @@ namespace Mercurial.Tests
 				client.Add (Path.Combine (path, "bar"));
 				client.Commit ("Commit only bar", Path.Combine (path, "bar"));
 				Assert.That (!client.Status ().ContainsKey ("bar"), "Commit failed for bar");
+				Assert.AreEqual (2, client.Log (null).Count, "Unexpected revision count");
+			}
+		}
+		
+		[Test]
+		public void TestLog ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			CommandClient.Initialize (path);
+			
+			using (var client = new CommandClient (path, null, null)) {
+				File.WriteAllText (file, "1");
+				client.Add (file);
+				client.Commit ("1");
+				File.WriteAllText (file, "2");
+				client.Commit ("2");
+				Assert.AreEqual (2, client.Log (null).Count, "Unexpected revision count");
 			}
 		}
 

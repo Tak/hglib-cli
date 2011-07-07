@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Xml;
 using System.Net;
 using System.Linq;
 using System.Text;
@@ -196,6 +197,56 @@ namespace Mercurial
 			if (1 != result.Result && 0 != result.Result) {
 				ThrowOnFail (result, 0, "Error committing");
 			}
+		}
+		
+		public IList<Revision> Log (string revisionRange, params string[] files)
+		{
+			return Log (revisionRange, files, false, false, DateTime.MinValue, DateTime.MinValue, false, null, false, false, false, null, null, null, 0, null, null);
+		}
+		
+		public IList<Revision> Log (string revisionRange, IEnumerable<string> files, bool followAcrossCopy, bool followFirstMergeParent, DateTime fromDate, DateTime toDate, bool showCopiedFiles, string searchText, bool showRemoves, bool onlyMerges, bool excludeMerges, string user, string branch, string pruneRevisions, int limit, string includePattern, string excludePattern)
+		{
+			var arguments = new List<string> (){ "log", "--style", "xml" };
+			AddNonemptyStringArgument (arguments, revisionRange, "--rev");
+			AddArgumentIf (arguments, followAcrossCopy, "--follow");
+			AddArgumentIf (arguments, followFirstMergeParent, "--follow-first");
+			AddArgumentIf (arguments, showCopiedFiles, "--copies");
+			AddNonemptyStringArgument (arguments, searchText, "--keyword");
+			AddArgumentIf (arguments, showRemoves, "--removed");
+			AddArgumentIf (arguments, onlyMerges, "--only-merges");
+			AddArgumentIf (arguments, excludeMerges, "--no-merges");
+			AddNonemptyStringArgument (arguments, user, "--user");
+			AddNonemptyStringArgument (arguments, branch, "--branch");
+			AddNonemptyStringArgument (arguments, pruneRevisions, "--prune");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			if (0 < limit) {
+				arguments.Add ("--limit");
+				arguments.Add (limit.ToString ());
+			}
+			if (DateTime.MinValue != fromDate && DateTime.MinValue != toDate) {
+				arguments.Add (string.Format ("{0} to {1}",
+				                              fromDate.ToString ("yyyy-MM-dd HH:mm:ss"),
+				                              toDate.ToString ("yyyy-MM-dd HH:mm:ss")));
+			}
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			ThrowOnFail (result, 0, "Error getting log");
+			
+			XmlDocument document = new XmlDocument ();
+			
+			try {
+				document.LoadXml (result.Output);
+			} catch (XmlException ex) {
+				throw new CommandException ("Error getting log", ex);
+			}
+			
+			var revisions = new List<Revision> ();
+			foreach (XmlNode node in document.SelectNodes ("/log/logentry")) {
+				revisions.Add (new Revision (node));
+			}
+			
+			return revisions;
 		}
 		
 		#region Plumbing
