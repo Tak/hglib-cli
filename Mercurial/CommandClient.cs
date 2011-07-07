@@ -78,27 +78,7 @@ namespace Mercurial
 		
 		public void Initialize (string destination)
 		{
-			Initialize (destination, null, null, true);
-		}
-		
-		public void Initialize (string destination, string sshCommand, string remoteCommand, bool verifyServerCertificate)
-		{
-			var arguments = new List<string> (){ "init" };
-			
-			if (null != sshCommand) {
-				arguments.Add ("--ssh");
-				arguments.Add (sshCommand);
-			}
-			if (null != remoteCommand) {
-				arguments.Add ("--remotecmd");
-				arguments.Add (remoteCommand);
-			}
-			if (!verifyServerCertificate) {
-				arguments.Add ("--insecure");
-			}
-			
-			arguments.Add (destination);
-			CommandResult result = GetCommandOutput (arguments, null);
+			CommandResult result = GetCommandOutput (new[]{ "init", destination }, null);
 			if (0 != result.Result) {
 				throw new CommandException ("Error initializing repository", result);
 			}
