@@ -78,6 +78,24 @@ namespace Mercurial.Tests
 				Assert.AreEqual (Status.Added, statuses ["bar"]);
 			}
 		}
+		
+		[Test]
+		public void TestCommit ()
+		{
+			string path = GetTemporaryPath ();
+			CommandClient.Initialize (path);
+			using (var client = new CommandClient (path, null, null)) {
+				File.WriteAllText (Path.Combine (path, "foo"), string.Empty);
+				File.WriteAllText (Path.Combine (path, "bar"), string.Empty);
+				client.Add (Path.Combine (path, "foo"));
+				client.Commit ("Commit all");
+				Assert.That (!client.Status ().ContainsKey ("foo"), "Default commit failed for foo");
+				
+				client.Add (Path.Combine (path, "bar"));
+				client.Commit ("Commit only bar", Path.Combine (path, "bar"));
+				Assert.That (!client.Status ().ContainsKey ("bar"), "Commit failed for bar");
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{

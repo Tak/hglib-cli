@@ -120,7 +120,7 @@ namespace Mercurial
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error cloning to {0}", source));
 		}
 		
-		public void Add (IEnumerable<string> files)
+		public void Add (params string[] files)
 		{
 			Add (files, null, null, false, false);
 		}
@@ -139,7 +139,7 @@ namespace Mercurial
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error adding {0}", string.Join (" ", files.ToArray ())));
 		}
 		
-		public IDictionary<string,Status> Status (IEnumerable<string> files)
+		public IDictionary<string,Status> Status (params string[] files)
 		{
 			return Status (files, Mercurial.Status.Default, true, false, null, null, null, null, false);
 		}
@@ -166,13 +166,36 @@ namespace Mercurial
 			ThrowOnFail (result, 0, "Error retrieving status");
 			
 			return result.Output.Split (new[]{"\n"}, StringSplitOptions.RemoveEmptyEntries).Aggregate (new Dictionary<string,Status> (), (dict,line) => {
-					if (2 < line.Length) {
-						dict [line.Substring (2)] = ParseStatus (line.Substring (0, 1));
-					}
-					return dict;
-				},
+				if (2 < line.Length) {
+					dict [line.Substring (2)] = ParseStatus (line.Substring (0, 1));
+				}
+				return dict;
+			},
 				dict => dict
 			);
+		}
+		
+		public void Commit (string message, params string[] files)
+		{
+			Commit (message, files, false, false, null, null, null, DateTime.MinValue, null);
+		}
+		
+		public void Commit (string message, IEnumerable<string> files, bool addAndRemoveUnknowns, bool closeBranch, string includePattern, string excludePattern, string messageLog, DateTime date, string user)
+		{
+			var arguments = new List<string> (){ "commit" };
+			AddNonemptyStringArgument (arguments, message, "--message");
+			AddArgumentIf (arguments, addAndRemoveUnknowns, "--addremove");
+			AddArgumentIf (arguments, closeBranch, "--close-branch");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			AddNonemptyStringArgument (arguments, messageLog, "--logfile");
+			AddNonemptyStringArgument (arguments, user, "--user");
+			AddFormattedDateArgument (arguments, date, "--date");
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			if (1 != result.Result && 0 != result.Result) {
+				ThrowOnFail (result, 0, "Error committing");
+			}
 		}
 		
 		#region Plumbing
@@ -418,6 +441,14 @@ namespace Mercurial
 			if (!string.IsNullOrEmpty (argument)) {
 				arguments.Add (argumentPrefix);
 				arguments.Add (argument);
+			}
+		}
+		
+		static void AddFormattedDateArgument (IList<string> arguments, DateTime date, string datePrefix)
+		{
+			if (DateTime.MinValue != date) {
+				arguments.Add (datePrefix);
+				arguments.Add (date.ToString ("yyyy-MM-dd HH:mm:ss"));
 			}
 		}
 
