@@ -68,6 +68,39 @@ namespace Mercurial
 			Handshake ();
 		}
 		
+		public void Initialize (string destination)
+		{
+			Initialize (destination, null, null, true, false);
+		}
+		
+		public void Initialize (string destination, string sshCommand, string remoteCommand, bool verifyServerCertificate, bool usePatchRepository)
+		{
+			var arguments = new List<string> (){ "init" };
+			
+			if (null != sshCommand) {
+				arguments.Add ("--ssh");
+				arguments.Add (sshCommand);
+			}
+			if (null != remoteCommand) {
+				arguments.Add ("--remotecmd");
+				arguments.Add (remoteCommand);
+			}
+			if (!verifyServerCertificate) {
+				arguments.Add ("--insecure");
+			}
+			if (usePatchRepository) {
+				arguments.Add ("--mq");
+			}
+			
+			arguments.Add (destination);
+			CommandResult result = GetCommandOutput (arguments, null);
+			if (0 != result.Result) {
+				throw new CommandException ("Error initializing repository", result);
+			}
+		}
+		
+		#region Plumbing
+		
 		public void Handshake ()
 		{
 			CommandMessage handshake = ReadMessage ();
@@ -204,6 +237,8 @@ namespace Mercurial
 			Close ();
 		}
 		#endregion		
+		
+		#endregion
 		
 		#region Utility
 		

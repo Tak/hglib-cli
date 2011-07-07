@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Collections.Generic;
@@ -25,6 +26,16 @@ namespace Mercurial.Tests
 				Dictionary<string,string > config = client.Configuration;
 				Assert.IsNotNull (config);
 				Console.WriteLine (config.Aggregate (new StringBuilder (), (s,pair) => s.AppendFormat ("{0} = {1}\n", pair.Key, pair.Value), s => s.ToString ()));
+			}
+		}
+		
+		[Test]
+		public void TestInitialize ()
+		{
+			using (var client = new CommandClient (null, null, null)) {
+				string path = Path.Combine (Path.GetTempPath (), DateTime.UtcNow.Ticks.ToString ());
+				client.Initialize (path);
+				Assert.That (Directory.Exists (Path.Combine (path, ".hg")), string.Format ("Repository was not created at {0}", path));
 			}
 		}
 	}
