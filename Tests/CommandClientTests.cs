@@ -15,7 +15,6 @@ namespace Mercurial.Tests
 		static readonly string TestRepo = "http://selenic.com/hg";
 		static List<string> garbage = new List<string> ();
 		
-		
 		[SetUp]
 		public void Setup ()
 		{
@@ -72,6 +71,7 @@ namespace Mercurial.Tests
 		}
 		
 		[Test]
+		[Ignore("Don't thrash selenic")]
 		public void TestCloneRemote ()
 		{
 			string path = GetTemporaryPath ();
@@ -283,6 +283,7 @@ namespace Mercurial.Tests
 		}
 		
 		[Test]
+		[Ignore("Merge tool popup")]
 		public void TestMerge ()
 		{
 			string firstPath = GetTemporaryPath ();
@@ -316,6 +317,8 @@ namespace Mercurial.Tests
 				Assert.IsTrue (secondClient.Pull (null), "Pull unexpectedly resulted in unresolved files");
 				Assert.AreEqual (3, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
+				Assert.AreEqual (2, secondClient.Heads ().Count (), "Unexpected number of heads");
+				
 				Assert.IsTrue (secondClient.Merge (null), "Merge unexpectedly resulted in unresolved files");
 			} finally {
 				if (null != firstClient)
@@ -323,6 +326,106 @@ namespace Mercurial.Tests
 				if (null != secondClient)
 					secondClient.Dispose ();
 			}
+		}
+		
+		[Test]
+		public void TestHeads ()
+		{
+			string firstPath = GetTemporaryPath ();
+			string secondPath = GetTemporaryPath ();
+			string file = Path.Combine (firstPath, "foo");
+			CommandClient.Initialize (firstPath);
+			CommandClient firstClient = null,
+			              secondClient = null;
+			
+			try {
+				// Create repo with one commit
+				firstClient = new CommandClient (firstPath, null, null);
+				File.WriteAllText (file, "1\n");
+				firstClient.Add (file);
+				firstClient.Commit ("1");
+			
+				// Clone repo
+				CommandClient.Clone (firstPath, secondPath);
+				secondClient = new CommandClient (secondPath, null, null);
+				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
+				
+				// Add changeset to original repo
+				File.WriteAllText (file, "2\n");
+				firstClient.Commit ("2");
+				
+				// Add non-conflicting changeset to child repo
+				File.WriteAllText (Path.Combine (secondPath, "foo"), "1\na\n");
+				secondClient.Commit ("a");
+				
+				// Pull from clone
+				Assert.IsTrue (secondClient.Pull (null), "Pull unexpectedly resulted in unresolved files");
+				Assert.AreEqual (3, secondClient.Log (null).Count, "Unexpected number of log entries");
+				
+				Assert.AreEqual (2, secondClient.Heads ().Count (), "Unexpected number of heads");
+			} finally {
+				if (null != firstClient)
+					firstClient.Dispose ();
+				if (null != secondClient)
+					secondClient.Dispose ();
+			}
+		}
+		
+		[Test]
+		public void TestPush ()
+		{
+			string firstPath = GetTemporaryPath ();
+			string secondPath = GetTemporaryPath ();
+			string file = Path.Combine (firstPath, "foo");
+			CommandClient.Initialize (firstPath);
+			CommandClient firstClient = null,
+			              secondClient = null;
+			
+			try {
+				// Create repo with one commit
+				firstClient = new CommandClient (firstPath, null, null);
+				File.WriteAllText (file, "1\n");
+				firstClient.Add (file);
+				firstClient.Commit ("1");
+			
+				// Clone repo
+				CommandClient.Clone (firstPath, secondPath);
+				secondClient = new CommandClient (secondPath, null, null);
+				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
+				
+				// Add changeset to child repo
+				File.WriteAllText (Path.Combine (secondPath, "foo"), "1\na\n");
+				secondClient.Commit ("a");
+				
+				// Push to parent
+				Assert.IsTrue (secondClient.Push (firstPath, null), "Nothing to push");
+				
+				// Assert that the first repo now has two revisions in the log
+				Assert.AreEqual (2, firstClient.Log (null, firstPath).Count, "Known commandserver bug: server is out of sync");
+			} finally {
+				if (null != firstClient)
+					firstClient.Dispose ();
+				if (null != secondClient)
+					secondClient.Dispose ();
+			}
+		}
+		
+		[Test]
+		public void TestSummary ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			string summary = string.Empty;
+			CommandClient.Initialize (path);
+			
+			using (var client = new CommandClient (path, null, null)) {
+				File.WriteAllText (file, "1");
+				client.Add (file);
+				client.Commit ("1", null, false, false, null, null, null, DateTime.MinValue, "user");
+				summary = client.Summary (false);
+			}
+			
+			Assert.IsTrue (summary.Contains ("branch: default"));
 		}
 
 		static string GetTemporaryPath ()

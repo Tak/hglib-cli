@@ -235,20 +235,39 @@ namespace Mercurial
 			CommandResult result = GetCommandOutput (arguments, null);
 			ThrowOnFail (result, 0, "Error getting log");
 			
-			XmlDocument document = new XmlDocument ();
+			Console.WriteLine (result.Output);
 			
 			try {
-				document.LoadXml (result.Output);
+				return ParseRevisionsFromLog (result.Output);
 			} catch (XmlException ex) {
 				throw new CommandException ("Error getting log", ex);
 			}
+		}
+		
+		public IEnumerable<Revision> Heads (params string[] revisions)
+		{
+			return Heads (revisions, null, false, false);
+		}
+		
+		public IEnumerable<Revision> Heads (IEnumerable<string> revisions, string startRevision, bool onlyTopologicalHeads, bool showClosed)
+		{
+			var arguments = new List<string> (){ "heads", "--style", "xml" };
+			AddNonemptyStringArgument (arguments, startRevision, "--rev");
+			AddArgumentIf (arguments, onlyTopologicalHeads, "--topo");
+			AddArgumentIf (arguments, showClosed, "--closed");
+			if (null != revisions)
+				arguments.AddRange (revisions);
 			
-			var revisions = new List<Revision> ();
-			foreach (XmlNode node in document.SelectNodes ("/log/logentry")) {
-				revisions.Add (new Revision (node));
+			CommandResult result = GetCommandOutput (arguments, null);
+			if (1 != result.Result && 0 != result.Result) {
+				ThrowOnFail (result, 0, "Error getting heads");
 			}
 			
-			return revisions;
+			try {
+				return ParseRevisionsFromLog (result.Output);
+			} catch (XmlException ex) {
+				throw new CommandException ("Error getting heads", ex);
+			}
 		}
 		
 		public string Annotate (string revision, params string[] files)
@@ -398,6 +417,57 @@ namespace Mercurial
 			}
 			
 			return (0 == result.Result);
+		}
+		
+		public bool Push (string destination, string toRevision)
+		{
+			return Push (destination, toRevision, false, null, false);
+		}
+		
+		public bool Push (string destination, string toRevision, bool force, string branch, bool allowNewBranch)
+		{
+			var arguments = new List<string> (){ "push" };
+			AddNonemptyStringArgument (arguments, toRevision, "--rev");
+			AddArgumentIf (arguments, force, "--force");
+			AddNonemptyStringArgument (arguments, branch, "--branch");
+			AddArgumentIf (arguments, allowNewBranch, "--new-branch");
+			AddArgumentIf (arguments, !string.IsNullOrEmpty (destination), destination);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			if (1 != result.Result && 0 != result.Result) {
+				ThrowOnFail (result, 0, "Error pushing");
+			}
+			return 0 == result.Result;
+		}
+		
+		public bool Update (string revision)
+		{
+			return Update (revision, false, false, DateTime.MinValue);
+		}
+		
+		public bool Update (string revision, bool discardUncommittedChanges, bool updateAcrossBranches, DateTime toDate)
+		{
+			var arguments = new List<string> (){ "update" };
+			AddArgumentIf (arguments, discardUncommittedChanges, "--clean");
+			AddArgumentIf (arguments, updateAcrossBranches, "--check");
+			AddFormattedDateArgument (arguments, toDate, "--date");
+			AddArgumentIf (arguments, !string.IsNullOrEmpty (revision), revision);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			if (0 != result.Result && 1 != result.Result) {
+				ThrowOnFail (result, 0, "Error updating");
+			}
+			
+			return (0 == result.Result);
+		}
+		
+		public string Summary (bool remote)
+		{
+			var arguments = new List<string> (){ "summary" };
+			AddArgumentIf (arguments, remote, "--remote");
+			CommandResult result = GetCommandOutput (arguments, null);
+			ThrowOnFail (result, 0, "Error getting summary");
+			return result.Output;
 		}
 		
 		#region Plumbing
@@ -708,6 +778,19 @@ namespace Mercurial
 			default:
 				return Mercurial.Status.Clean; // ?
 			}
+		}
+		
+		static IList<Revision> ParseRevisionsFromLog (string xmlText)
+		{
+			XmlDocument document = new XmlDocument ();
+			document.LoadXml (xmlText);
+			
+			var revisions = new List<Revision> ();
+			foreach (XmlNode node in document.SelectNodes ("/log/logentry")) {
+				revisions.Add (new Revision (node));
+			}
+			
+			return revisions;
 		}
 		
 		#endregion
