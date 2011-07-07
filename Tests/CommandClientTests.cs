@@ -175,6 +175,30 @@ namespace Mercurial.Tests
 			Assert.AreEqual ("-1", lines [10]);
 			Assert.AreEqual ("+2", lines [11]);
 		}
+		
+		[Test]
+		public void TestForget ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			IDictionary<string,Status > statuses = null;
+			
+			CommandClient.Initialize (path);
+			using (var client = new CommandClient (path, null, null)) {
+				File.WriteAllText (file, string.Empty);
+				client.Add (file);
+				statuses = client.Status (null);
+				
+				Assert.IsNotNull (statuses);
+				Assert.That (statuses.ContainsKey ("foo"), "No status received for foo");
+				Assert.AreEqual (Status.Added, statuses ["foo"]);
+				
+				client.Forget (file);
+				statuses = client.Status ();
+			}
+			Assert.That (statuses.ContainsKey ("foo"), "foo is no longer known");
+			Assert.AreEqual (Status.Unknown, statuses ["foo"], "foo was not forgotten");
+		}
 
 		static string GetTemporaryPath ()
 		{

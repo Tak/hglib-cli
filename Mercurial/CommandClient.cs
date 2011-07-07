@@ -339,6 +339,24 @@ namespace Mercurial
 			return result.Output;
 		}
 		
+		public void Forget (params string[] files)
+		{
+			Forget (files, null, null);
+		}
+		
+		public void Forget (IEnumerable<string> files, string includePattern, string excludePattern)
+		{
+			if (null == files || 0 == files.Count ())
+				throw new ArgumentException ("File list cannot be empty", "files");
+				
+			var arguments = new List<string> (){ "forget" };
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			arguments.AddRange (files);
+			
+			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error forgetting {0}", string.Join (",", files.ToArray ())));
+		}
+		
 		#region Plumbing
 		
 		public void Handshake ()
