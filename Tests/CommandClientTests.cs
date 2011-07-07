@@ -13,6 +13,25 @@ namespace Mercurial.Tests
 	public class CommandClientTests
 	{
 		static readonly string TestRepo = "http://selenic.com/hg";
+		static List<string> garbage = new List<string> ();
+		
+		
+		[SetUp]
+		public void Setup ()
+		{
+		}
+		
+		[TearDown]
+		public void Teardown ()
+		{
+			foreach (string garbageDir in garbage) {
+				try {
+					Directory.Delete (garbageDir, true);
+				} catch {
+					// Don't care
+				}
+			}
+		}
 		
 		[Test]
 		public void TestConnection ()
@@ -64,19 +83,21 @@ namespace Mercurial.Tests
 		public void TestAdd ()
 		{
 			string path = GetTemporaryPath ();
+			IDictionary<string,Status > statuses = null;
+			
 			CommandClient.Initialize (path);
 			using (var client = new CommandClient (path, null, null)) {
 				File.WriteAllText (Path.Combine (path, "foo"), string.Empty);
 				File.WriteAllText (Path.Combine (path, "bar"), string.Empty);
-				client.Add (new[]{ Path.Combine (path, "foo"), Path.Combine (path, "bar") });
-				IDictionary<string,Status > statuses = client.Status (null);
-				
-				Assert.IsNotNull (statuses);
-				Assert.That (statuses.ContainsKey ("foo"), "No status received for foo");
-				Assert.That (statuses.ContainsKey ("bar"), "No status received for bar");
-				Assert.AreEqual (Status.Added, statuses ["foo"]);
-				Assert.AreEqual (Status.Added, statuses ["bar"]);
+				client.Add (Path.Combine (path, "foo"), Path.Combine (path, "bar"));
+				statuses = client.Status (null);
 			}
+			
+			Assert.IsNotNull (statuses);
+			Assert.That (statuses.ContainsKey ("foo"), "No status received for foo");
+			Assert.That (statuses.ContainsKey ("bar"), "No status received for bar");
+			Assert.AreEqual (Status.Added, statuses ["foo"]);
+			Assert.AreEqual (Status.Added, statuses ["bar"]);
 		}
 		
 		[Test]
@@ -202,7 +223,9 @@ namespace Mercurial.Tests
 
 		static string GetTemporaryPath ()
 		{
-			return Path.Combine (Path.GetTempPath (), DateTime.UtcNow.Ticks.ToString ());
+			string path = Path.Combine (Path.GetTempPath (), DateTime.UtcNow.Ticks.ToString ());
+			garbage.Add (path);
+			return path;
 		}
 	}
 }
