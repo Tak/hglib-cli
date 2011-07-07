@@ -32,18 +32,25 @@ namespace Mercurial
 		}
 		Dictionary<string,string> _configuration;
 		
+		public string Root {
+			get {
+				if (null != _root) return _root;
+				return _root = GetCommandOutput (new[]{"root"}, null).Output.TrimEnd ();
+			}
+		}
+		string _root;
 		
 		public CommandClient (string path, string encoding, Dictionary<string,string> configs)
 		{
 			var arguments = new StringBuilder ("serve --cmdserver pipe ");
 			
 			if (!string.IsNullOrEmpty (path)) {
-				arguments.AppendFormat ("-R path");
+				arguments.AppendFormat ("-R {0} ", path);
 			}
 			
 			if (null != configs) {
 				// build config string in key=value format
-				arguments.AppendFormat ("--config {0}", 
+				arguments.AppendFormat ("--config {0} ", 
 					configs.Aggregate (new StringBuilder (),
 						(accumulator, pair) => accumulator.AppendFormat ("{0}={1},", pair.Key, pair.Value),
 						accumulator => accumulator.ToString ()
@@ -60,6 +67,7 @@ namespace Mercurial
 			commandServerInfo.UseShellExecute = false;
 			
 			try {
+				// Console.WriteLine ("Launching command server with: {0} {1}", MercurialPath, arguments.ToString ());
 				commandServer = Process.Start (commandServerInfo);
 			} catch (Exception ex) {
 				throw new ServerException ("Error launching mercurial command server", ex);
@@ -70,10 +78,10 @@ namespace Mercurial
 		
 		public void Initialize (string destination)
 		{
-			Initialize (destination, null, null, true, false);
+			Initialize (destination, null, null, true);
 		}
 		
-		public void Initialize (string destination, string sshCommand, string remoteCommand, bool verifyServerCertificate, bool usePatchRepository)
+		public void Initialize (string destination, string sshCommand, string remoteCommand, bool verifyServerCertificate)
 		{
 			var arguments = new List<string> (){ "init" };
 			
@@ -87,9 +95,6 @@ namespace Mercurial
 			}
 			if (!verifyServerCertificate) {
 				arguments.Add ("--insecure");
-			}
-			if (usePatchRepository) {
-				arguments.Add ("--mq");
 			}
 			
 			arguments.Add (destination);
@@ -221,7 +226,9 @@ namespace Mercurial
 			};
 			
 			int result = RunCommand (command, outputs, inputs);
-			return new CommandResult (UTF8Encoding.UTF8.GetString (output.GetBuffer ()), UTF8Encoding.UTF8.GetString (error.GetBuffer ()), result);
+			return new CommandResult (UTF8Encoding.UTF8.GetString (output.GetBuffer (), 0, (int)output.Length),
+			                          UTF8Encoding.UTF8.GetString (error.GetBuffer (), 0, (int)error.Length),
+			                          result);
 		}
 		
 		public void Close ()

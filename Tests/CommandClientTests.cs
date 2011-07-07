@@ -33,10 +33,30 @@ namespace Mercurial.Tests
 		public void TestInitialize ()
 		{
 			using (var client = new CommandClient (null, null, null)) {
-				string path = Path.Combine (Path.GetTempPath (), DateTime.UtcNow.Ticks.ToString ());
+				string path = GetTemporaryPath ();
 				client.Initialize (path);
 				Assert.That (Directory.Exists (Path.Combine (path, ".hg")), string.Format ("Repository was not created at {0}", path));
 			}
+		}
+		
+		[Test]
+		public void TestRoot ()
+		{
+			string path = GetTemporaryPath ();
+			
+			using (var client = new CommandClient (null, null, null)) {
+				client.Initialize (path);
+				Assert.That (Directory.Exists (Path.Combine (path, ".hg")), string.Format ("Repository was not created at {0}", path));
+			}
+			
+			using (var rootedClient = new CommandClient (path, null, null)) {
+				Assert.AreEqual (path, rootedClient.Root, "Unexpected repository root");
+			}
+		}
+
+		static string GetTemporaryPath ()
+		{
+			return Path.Combine (Path.GetTempPath (), DateTime.UtcNow.Ticks.ToString ());
 		}
 	}
 }
