@@ -129,6 +129,29 @@ namespace Mercurial.Tests
 				Assert.AreEqual ("user 0: 1", client.Annotate (null, file));
 			}
 		}
+		
+		[Test]
+		public void TestDiff ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			string diffText = string.Empty;
+			CommandClient.Initialize (path);
+			
+			using (var client = new CommandClient (path, null, null)) {
+				File.WriteAllText (file, "1\n");
+				client.Add (file);
+				client.Commit ("1", null, false, false, null, null, null, DateTime.MinValue, "user");
+				File.WriteAllText (file, "2\n");
+				diffText = client.Diff (null, file);
+			}
+			
+			string[] lines = diffText.Split (new[]{"\n"}, StringSplitOptions.RemoveEmptyEntries);
+			Assert.AreEqual (6, lines.Length, "Unexpected diff length");
+			Assert.AreEqual ("@@ -1,1 +1,1 @@", lines [3]);
+			Assert.AreEqual ("-1", lines [4]);
+			Assert.AreEqual ("+2", lines [5]);
+		}
 
 		static string GetTemporaryPath ()
 		{

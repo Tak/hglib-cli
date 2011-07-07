@@ -272,10 +272,45 @@ namespace Mercurial
 			AddNonemptyStringArgument (arguments, includePattern, "--include");
 			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
 			
-			if (null != files) arguments.AddRange (files);
+			if (null != files)
+				arguments.AddRange (files);
 			
 			CommandResult result = GetCommandOutput (arguments, null);
 			ThrowOnFail (result, 0, "Error annotating");
+			
+			return result.Output;
+		}
+		
+		public string Diff (string revision, params string[] files)
+		{
+			return Diff (revision, files, null, false, false, true, false, false, false, false, false, 0, null, null, false);
+		}
+		
+		public string Diff (string revision, IEnumerable<string> files, string changeset, bool diffBinaries, bool useGitFormat, bool showDates, bool showFunctionNames, bool reverse, bool ignoreWhitespace, bool ignoreWhitespaceOnlyChanges, bool ignoreBlankLines, int contextLines, string includePattern, string excludePattern, bool recurseSubRepositories)
+		{
+			var arguments = new List<string> (){ "diff" };
+			AddNonemptyStringArgument (arguments, revision, "--rev");
+			AddNonemptyStringArgument (arguments, changeset, "--change");
+			AddArgumentIf (arguments, diffBinaries, "--text");
+			AddArgumentIf (arguments, useGitFormat, "--git");
+			AddArgumentIf (arguments, !showDates, "--nodates");
+			AddArgumentIf (arguments, showFunctionNames, "--show-function");
+			AddArgumentIf (arguments, reverse, "--reverse");
+			AddArgumentIf (arguments, ignoreWhitespace, "--ignore-all-space");
+			AddArgumentIf (arguments, ignoreWhitespaceOnlyChanges, "--ignore-space-change");
+			AddArgumentIf (arguments, ignoreBlankLines, "--ignore-blank-lines");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			AddArgumentIf (arguments, recurseSubRepositories, "--subrepos");
+			if (0 < contextLines) {
+				arguments.Add ("--unified");
+				arguments.Add (contextLines.ToString ());
+			}
+			
+			if (null != files) arguments.AddRange (files);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			ThrowOnFail (result, 0, "Error getting diff");
 			
 			return result.Output;
 		}
