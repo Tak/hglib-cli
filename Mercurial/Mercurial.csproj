@@ -39,6 +39,8 @@
     <Compile Include="ServerException.cs" />
     <Compile Include="CommandChannel.cs" />
     <Compile Include="CommandMessage.cs" />
+    <Compile Include="ResponseException.cs" />
+    <Compile Include="CommandResult.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

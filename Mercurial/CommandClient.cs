@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Net;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
@@ -16,6 +18,20 @@ namespace Mercurial
 		
 		public string Encoding { get; private set; }
 		public IEnumerable<string> Capabilities { get; private set; }
+		public Dictionary<string,string> Configuration {
+			get {
+				if (null != _configuration)
+					return _configuration;
+				
+				CommandResult result = GetCommandOutput (new[]{"showconfig"}, null);
+				if (0 == result.Result) {
+					return _configuration = ParseDictionary (result.Output, new[]{"="});
+				}
+				return null;
+			}
+		}
+		Dictionary<string,string> _configuration;
+		
 		
 		public CommandClient (string path, string encoding, Dictionary<string,string> configs)
 		{
@@ -55,7 +71,7 @@ namespace Mercurial
 		public void Handshake ()
 		{
 			CommandMessage handshake = ReadMessage ();
-			Dictionary<string,string > headers = ParseHeaders (handshake.Message);
+			Dictionary<string,string > headers = ParseDictionary (handshake.Message, new[]{": "});
 			
 			if (!headers.ContainsKey ("encoding") || !headers.ContainsKey ("capabilities")) {
 				throw new ServerException ("Error handshaking: expected 'encoding' and 'capabilities' fields");
@@ -80,7 +96,12 @@ namespace Mercurial
 				throw new ServerException (string.Format ("Received malformed header from command server: {0} bytes", bytesRead));
 			}
 			
+			CommandChannel channel = CommandChannelFromFirstByte (header);
 			long messageLength = (long)ReadUint (header, 1);
+			
+			if (CommandChannel.Input == channel || CommandChannel.Line == channel)
+				return new CommandMessage (channel, messageLength.ToString ());
+			
 			byte[] messageBuffer = new byte[messageLength];
 			
 			try {
@@ -99,28 +120,109 @@ namespace Mercurial
 			}
 				
 			CommandMessage message = new CommandMessage (CommandChannelFromFirstByte (header), messageBuffer);
-			Console.WriteLine ("READ: {0} {1}", message, message.Message);
+			// Console.WriteLine ("READ: {0} {1}", message, message.Message);
 			return message;
+		}
+		
+		public int RunCommand (IList<string> command,
+		                       Dictionary<CommandChannel,Stream> outputs,
+		                       Dictionary<CommandChannel,Func<uint,byte[]>> inputs)
+		{
+			if (null == command || 0 == command.Count)
+				throw new ArgumentException ("Command must not be empty", "command");
+			
+			byte[] commandBuffer = UTF8Encoding.UTF8.GetBytes ("runcommand\n");
+			byte[] argumentBuffer;
+			
+			argumentBuffer = command.Aggregate (new List<byte> (), (bytes,arg) => {
+				bytes.AddRange (UTF8Encoding.UTF8.GetBytes (arg));
+				bytes.Add (0);
+				return bytes;
+			},
+				bytes => {
+				bytes.RemoveAt (bytes.Count - 1);
+				return bytes.ToArray ();
+			}
+			);
+			
+			byte[] lengthBuffer = BitConverter.GetBytes (IPAddress.HostToNetworkOrder (argumentBuffer.Length));
+			
+			commandServer.StandardInput.BaseStream.Write (commandBuffer, 0, commandBuffer.Length);
+			commandServer.StandardInput.BaseStream.Write (lengthBuffer, 0, lengthBuffer.Length);
+			commandServer.StandardInput.BaseStream.Write (argumentBuffer, 0, argumentBuffer.Length);
+			commandServer.StandardInput.BaseStream.Flush ();
+			
+			while (true) {
+				CommandMessage message = ReadMessage ();
+				if (CommandChannel.Result == message.Channel)
+					return ReadInt (message.Buffer, 0);
+					
+				if (inputs != null && inputs.ContainsKey (message.Channel)) {
+					byte[] sendBuffer = inputs [message.Channel] (ReadUint (message.Buffer, 0));
+					if (null == sendBuffer || 0 == sendBuffer.LongLength) {
+					} else {
+					}
+				}
+				if (outputs != null && outputs.ContainsKey (message.Channel)) {
+					if (message.Buffer.Length > int.MaxValue) {
+						// .NET hates uints
+						int firstPart = message.Buffer.Length / 2;
+						int secondPart = message.Buffer.Length - firstPart;
+						outputs [message.Channel].Write (message.Buffer, 0, firstPart);
+						outputs [message.Channel].Write (message.Buffer, firstPart, secondPart);
+					} else {
+						outputs [message.Channel].Write (message.Buffer, 0, message.Buffer.Length);
+					}
+				}
+			}
+		}
+		
+		public CommandResult GetCommandOutput (IList<string> command,
+		                                       Dictionary<CommandChannel,Func<uint,byte[]>> inputs)
+		{
+			MemoryStream output = new MemoryStream ();
+			MemoryStream error = new MemoryStream ();
+			var outputs = new Dictionary<CommandChannel,Stream> () {
+				{ CommandChannel.Output, output },
+				{ CommandChannel.Error, error },
+			};
+			
+			int result = RunCommand (command, outputs, inputs);
+			return new CommandResult (UTF8Encoding.UTF8.GetString (output.GetBuffer ()), UTF8Encoding.UTF8.GetString (error.GetBuffer ()), result);
+		}
+		
+		public void Close ()
+		{
+			if (null != commandServer) 
+				commandServer.Close ();
+			commandServer = null;
 		}
 
 		#region IDisposable implementation
 		public void Dispose ()
 		{
-			commandServer.Close ();
+			Close ();
 		}
 		#endregion		
 		
 		#region Utility
 		
-		public static uint ReadUint (byte[] buffer, int offset)
+		public static int ReadInt (byte[] buffer, int offset)
 		{
 			if (null == buffer) throw new ArgumentNullException ("buffer");
 			if (buffer.Length < offset + 4) throw new ArgumentOutOfRangeException ("offset");
 			
-			byte[] privateBuffer = new byte[4];
-			Array.Copy (buffer, offset, privateBuffer, 0, 4);
-			if (BitConverter.IsLittleEndian) Array.Reverse (privateBuffer);
-			return BitConverter.ToUInt32 (privateBuffer, 0);
+			return IPAddress.NetworkToHostOrder (BitConverter.ToInt32 (buffer, offset));
+		}
+		
+		public static uint ReadUint (byte[] buffer, int offset)
+		{
+			if (null == buffer)
+				throw new ArgumentNullException ("buffer");
+			if (buffer.Length < offset + 4)
+				throw new ArgumentOutOfRangeException ("offset");
+			
+			return (uint)IPAddress.NetworkToHostOrder (BitConverter.ToInt32 (buffer, offset));
 		}
 		
 		public static CommandChannel CommandChannelFromFirstByte (byte[] header)
@@ -176,14 +278,14 @@ namespace Mercurial
 			return bytes[0];
 		}
 		
-		static Dictionary<string,string> ParseHeaders (string headerString)
+		static Dictionary<string,string> ParseDictionary (string input, string[] delimiters)
 		{
-			string[] headerDelimiters = new string[]{ ": " };
-			Dictionary<string,string > headers = headerString.Split ('\n')
+			Dictionary<string,string > headers = input.Split ('\n')
 				.Aggregate (new Dictionary<string,string> (),
 					(dict,line) => {
-				var tokens = line.Split (headerDelimiters, 2, StringSplitOptions.None);
-				dict [tokens [0]] = tokens [1];
+				var tokens = line.Split (delimiters, 2, StringSplitOptions.None);
+				if (2 == tokens.Count ())
+					dict [tokens [0]] = tokens [1];
 				return dict;
 			},
 					dict => dict
