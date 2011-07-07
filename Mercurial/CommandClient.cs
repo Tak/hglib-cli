@@ -315,6 +315,30 @@ namespace Mercurial
 			return result.Output;
 		}
 		
+		public string Export (params string[] revisions)
+		{
+			return Export (revisions, null, false, false, false, true);
+		}
+		
+		public string Export (IEnumerable<string> revisions, string outputFile, bool switchParent, bool diffBinaries, bool useGitFormat, bool showDates)
+		{
+			if (null == revisions || 0 == revisions.Count ())
+				throw new ArgumentException ("Revision list cannot be empty", "revisions");
+			
+			var arguments = new List<string> (){ "export" };
+			AddNonemptyStringArgument (arguments, outputFile, "--output");
+			AddArgumentIf (arguments, switchParent, "--switch-parent");
+			AddArgumentIf (arguments, diffBinaries, "--text");
+			AddArgumentIf (arguments, useGitFormat, "--git");
+			AddArgumentIf (arguments, !showDates, "--nodates");
+			arguments.AddRange (revisions);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			ThrowOnFail (result, 0, string.Format ("Error exporting {0}", string.Join (",", revisions.ToArray ())));
+			
+			return result.Output;
+		}
+		
 		#region Plumbing
 		
 		public void Handshake ()
