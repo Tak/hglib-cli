@@ -244,6 +244,86 @@ namespace Mercurial.Tests
 			Assert.That (statuses.ContainsKey ("foo"), "foo is no longer known");
 			Assert.AreEqual (Status.Unknown, statuses ["foo"], "foo was not forgotten");
 		}
+		
+		[Test]
+		public void TestPull ()
+		{
+			string firstPath = GetTemporaryPath ();
+			string secondPath = GetTemporaryPath ();
+			string file = Path.Combine (firstPath, "foo");
+			CommandClient.Initialize (firstPath);
+			CommandClient firstClient = null,
+			              secondClient = null;
+			
+			try {
+				// Create repo with one commit
+				firstClient = new CommandClient (firstPath, null, null);
+				File.WriteAllText (file, "1");
+				firstClient.Add (file);
+				firstClient.Commit ("1");
+			
+				// Clone repo
+				CommandClient.Clone (firstPath, secondPath);
+				secondClient = new CommandClient (secondPath, null, null);
+				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
+				
+				// Add changeset to original repo
+				File.WriteAllText (file, "2");
+				firstClient.Commit ("2");
+				
+				// Pull from clone
+				Assert.IsTrue (secondClient.Pull (null), "Pull unexpectedly resulted in unresolved files");
+				Assert.AreEqual (2, secondClient.Log (null).Count, "Unexpected number of log entries");
+			} finally {
+				if (null != firstClient)
+					firstClient.Dispose ();
+				if (null != secondClient)
+					secondClient.Dispose ();
+			}
+		}
+		
+		[Test]
+		public void TestMerge ()
+		{
+			string firstPath = GetTemporaryPath ();
+			string secondPath = GetTemporaryPath ();
+			string file = Path.Combine (firstPath, "foo");
+			CommandClient.Initialize (firstPath);
+			CommandClient firstClient = null,
+			              secondClient = null;
+			
+			try {
+				// Create repo with one commit
+				firstClient = new CommandClient (firstPath, null, null);
+				File.WriteAllText (file, "1\n");
+				firstClient.Add (file);
+				firstClient.Commit ("1");
+			
+				// Clone repo
+				CommandClient.Clone (firstPath, secondPath);
+				secondClient = new CommandClient (secondPath, null, null);
+				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
+				
+				// Add changeset to original repo
+				File.WriteAllText (file, "2\n");
+				firstClient.Commit ("2");
+				
+				// Add non-conflicting changeset to child repo
+				File.WriteAllText (Path.Combine (secondPath, "foo"), "1\na\n");
+				secondClient.Commit ("a");
+				
+				// Pull from clone
+				Assert.IsTrue (secondClient.Pull (null), "Pull unexpectedly resulted in unresolved files");
+				Assert.AreEqual (3, secondClient.Log (null).Count, "Unexpected number of log entries");
+				
+				Assert.IsTrue (secondClient.Merge (null), "Merge unexpectedly resulted in unresolved files");
+			} finally {
+				if (null != firstClient)
+					firstClient.Dispose ();
+				if (null != secondClient)
+					secondClient.Dispose ();
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{

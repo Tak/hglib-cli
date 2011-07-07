@@ -357,6 +357,49 @@ namespace Mercurial
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error forgetting {0}", string.Join (",", files.ToArray ())));
 		}
 		
+		public bool Merge (string revision)
+		{
+			return Merge (revision, false, null, false);
+		}
+		
+		public bool Merge (string revision, bool force, string mergeTool, bool dryRun)
+		{
+			var arguments = new List<string> (){ "merge" };
+			AddArgumentIf (arguments, force, "--force");
+			AddNonemptyStringArgument (arguments, mergeTool, "--tool");
+			AddArgumentIf (arguments, dryRun, "--preview");
+			AddArgumentIf (arguments, !string.IsNullOrEmpty (revision), revision);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			if (0 != result.Result && 1 != result.Result) {
+				ThrowOnFail (result, 0, "Error merging");
+			}
+			
+			return (0 == result.Result);
+		}
+		
+		public bool Pull (string source)
+		{
+			return Pull (source, null, false, false, null);
+		}
+		
+		public bool Pull (string source, string toRevision, bool update, bool force, string branch)
+		{
+			var arguments = new List<string> (){ "pull" };
+			AddNonemptyStringArgument (arguments, toRevision, "--rev");
+			AddArgumentIf (arguments, update, "--update");
+			AddArgumentIf (arguments, force, "--force");
+			AddNonemptyStringArgument (arguments, branch, "--branch");
+			AddArgumentIf (arguments, !string.IsNullOrEmpty (source), source);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			if (0 != result.Result && 1 != result.Result) {
+				ThrowOnFail (result, 0, "Error pulling");
+			}
+			
+			return (0 == result.Result);
+		}
+		
 		#region Plumbing
 		
 		public void Handshake ()
