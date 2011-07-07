@@ -80,6 +80,30 @@ namespace Mercurial.Tests
 		}
 		
 		[Test]
+		public void TestCloneLocal ()
+		{
+			string firstPath = GetTemporaryPath ();
+			string secondPath = GetTemporaryPath ();
+			string file = Path.Combine (firstPath, "foo");
+			CommandClient.Initialize (firstPath);
+			
+			using (var client = new CommandClient (firstPath, null, null)) {
+				File.WriteAllText (file, "1");
+				client.Add (file);
+				client.Commit ("1");
+			}
+			
+			CommandClient.Clone (firstPath, secondPath);
+			Assert.That (Directory.Exists (Path.Combine (secondPath, ".hg")), string.Format ("Repository was not cloned from {0} to {1}", firstPath, secondPath));
+			Assert.That (File.Exists (Path.Combine (secondPath, "foo")), "foo doesn't exist in cloned working copy");
+				
+			using (var client = new CommandClient (secondPath, null, null)) {
+				IList<Revision> log = client.Log (null);
+				Assert.AreEqual (1, log.Count, "Unexpected number of log entries");
+			}
+		}
+		
+		[Test]
 		public void TestAdd ()
 		{
 			string path = GetTemporaryPath ();
