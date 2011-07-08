@@ -24,14 +24,26 @@ using System.Text;
 
 namespace Mercurial
 {
-	public class CommandMessage
+	/// <summary>
+	/// Represents a message from the command server
+	/// </summary>
+	internal class CommandMessage
 	{
+		/// <summary>
+		/// The message's command channel
+		/// </summary>
 		public CommandChannel Channel { get; private set; }
 
+		/// <summary>
+		/// The raw message buffer
+		/// </summary>
 		public byte[] Buffer { 
 			get { return _buffer; }
 		}
 
+		/// <summary>
+		/// The string representation of the message
+		/// </summary>
 		public string Message {
 			get {
 				if (null != _message) return _message;

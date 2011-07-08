@@ -23,19 +23,46 @@ using System;
 
 namespace Mercurial
 {
+	/// <summary>
+	/// A mercurial command exception
+	/// </summary>
 	public class CommandException: Exception
 	{
-		public CommandException (string message):
+		/// <summary>
+		/// Create a new CommandException
+		/// </summary>
+		/// <param name='message'>
+		/// The base exception message
+		/// </param>
+		internal CommandException (string message):
 			base (message)
 		{
 		}
 		
-		public CommandException (string message, Exception innerException):
+		/// <summary>
+		/// Create a new CommandException
+		/// </summary>
+		/// <param name='message'>
+		/// The base exception message
+		/// </param>
+		/// <param name='innerException'>
+		/// The inner exception
+		/// </param>
+		internal CommandException (string message, Exception innerException):
 			base (message, innerException)
 		{
 		}
 		
-		public CommandException (string message, CommandResult result):
+		/// <summary>
+		/// Create a new CommandException
+		/// </summary>
+		/// <param name='message'>
+		/// The base exception message
+		/// </param>
+		/// <param name='result'>
+		/// Include the output and error from this result
+		/// </param>
+		internal CommandException (string message, CommandResult result):
 			this (string.Format ("{0}\n{1}\n{2}", message, result.Error, result.Output))
 		{
 		}

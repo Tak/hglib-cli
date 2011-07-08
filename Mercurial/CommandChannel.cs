@@ -23,6 +23,9 @@ using System;
 
 namespace Mercurial
 {
+	/// <summary>
+	/// A mercurial command channel
+	/// </summary>
 	public enum CommandChannel
 	{
 		Input,

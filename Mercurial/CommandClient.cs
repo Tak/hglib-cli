@@ -30,6 +30,9 @@ using System.Collections.Generic;
 
 namespace Mercurial
 {
+	/// <summary>
+	/// Client class for the Merurial command server
+	/// </summary>
 	public class CommandClient: IDisposable
 	{
 		static readonly string MercurialPath = "hg";
@@ -38,8 +41,22 @@ namespace Mercurial
 		
 		Process commandServer = null;
 		
+		/// <summary>
+		/// The text encoding being used in the current session
+		/// </summary>
 		public string Encoding { get; private set; }
+		
+		/// <summary>
+		/// The set of capabilities supported by the command server
+		/// </summary>
 		public IEnumerable<string> Capabilities { get; private set; }
+		
+		/// <summary>
+		/// The configuration of the current session
+		/// </summary>
+		/// <remarks>
+		/// Equivalent to "key = value" from hgrc or `hg showconfig`
+		/// </remarks>
 		public IDictionary<string,string> Configuration {
 			get {
 				if (null != _configuration)
@@ -54,6 +71,9 @@ namespace Mercurial
 		}
 		Dictionary<string,string> _configuration;
 		
+		/// <summary>
+		/// The root directory of the current repository
+		/// </summary>
 		public string Root {
 			get {
 				if (null != _root) return _root;
@@ -62,6 +82,19 @@ namespace Mercurial
 		}
 		string _root;
 		
+		
+		/// <summary>
+		/// Launch a new command server
+		/// </summary>
+		/// <param name='path'>
+		/// The path to the root of the repository to be used
+		/// </param>
+		/// <param name='encoding'>
+		/// The text encoding to be used for the session
+		/// </param>
+		/// <param name='configs'>
+		/// A configuration dictionary to be passed to the command server
+		/// </param>
 		public CommandClient (string path, string encoding, IDictionary<string,string> configs)
 		{
 			var arguments = new StringBuilder ("serve --cmdserver pipe ");
@@ -98,6 +131,15 @@ namespace Mercurial
 			Handshake ();
 		}
 		
+		/// <summary>
+		/// Create a new repository
+		/// </summary>
+		/// <remarks>
+		/// Equivalent to `hg init`
+		/// </remarks>
+		/// <param name='destination'>
+		/// The directory in which to create the repository
+		/// </param>
 		public static void Initialize (string destination)
 		{
 			using (var client = new CommandClient (null, null, null)) {
@@ -110,11 +152,49 @@ namespace Mercurial
 			ThrowOnFail (GetCommandOutput (new[]{ "init", destination }, null), 0, "Error initializing repository");
 		}
 		
+		/// <summary>
+		/// Create a copy of an existing repository
+		/// </summary>
+		/// <param name='source'>
+		/// The path to the repository to copy
+		/// </param>
+		/// <param name='destination'>
+		/// The path to the local destination for the clone
+		/// </param>
 		public static void Clone (string source, string destination)
 		{
 			Clone (source, destination, true, null, null, null, false, true);
 		}
 		
+		/// <summary>
+		/// Create a copy of an existing repository
+		/// </summary>
+		/// <param name='source'>
+		/// The path to the repository to copy
+		/// </param>
+		/// <param name='destination'>
+		/// The path to the local destination for the clone
+		/// </param>
+		/// <param name='updateWorkingCopy'>
+		/// Create a local working copy
+		/// </param>
+		/// <param name='updateToRevision'>
+		/// Update the working copy to this revision after cloning, 
+		/// or null for tip
+		/// </param>
+		/// <param name='cloneToRevision'>
+		/// Only clone up to this revision, 
+		/// or null for all revisions
+		/// </param>
+		/// <param name='onlyCloneBranch'>
+		/// Only clone this branch, or null for all branches
+		/// </param>
+		/// <param name='forcePullProtocol'>
+		/// Force usage of the pull protocol for local clones
+		/// </param>
+		/// <param name='compressData'>
+		/// Compress changesets for transfer
+		/// </param>
 		public static void Clone (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData)
 		{
 			using (var client = new CommandClient (null, null, null)) {
@@ -142,11 +222,36 @@ namespace Mercurial
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error cloning to {0}", source));
 		}
 		
+		/// <summary>
+		/// Schedules files to be version controlled and added to the repository
+		/// </summary>
+		/// <param name='files'>
+		/// The files to be added
+		/// </param>
 		public void Add (params string[] files)
 		{
 			Add (files, null, null, false, false);
 		}
 		
+		/// <summary>
+		/// Schedules files to be version controlled and added to the repository
+		/// </summary>
+		/// <param name='files'>
+		/// The files to be added
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <param name='recurseSubRepositories'>
+		/// Recurse into subrepositories
+		/// </param>
+		/// <param name='dryRun'>
+		/// Check whether files can be successfully added, 
+		/// without actually adding them
+		/// </param>
 		public void Add (IEnumerable<string> files, string includePattern, string excludePattern, bool recurseSubRepositories, bool dryRun)
 		{
 			if (null == files) files = new List<string> ();
@@ -161,19 +266,57 @@ namespace Mercurial
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error adding {0}", string.Join (" ", files.ToArray ())));
 		}
 		
+		/// <summary>
+		/// Show the status of files in the repository
+		/// </summary>
+		/// <param name='files'>
+		/// Only show status for these files
+		/// </param>
+		/// <returns>
+		/// A dictionary mapping each file to its Status
+		/// </returns>
 		public IDictionary<string,Status> Status (params string[] files)
 		{
-			return Status (files, Mercurial.Status.Default, true, false, null, null, null, null, false);
+			return Status (files, Mercurial.Status.Default, false, null, null, null, null, false);
 		}
 		
-		public IDictionary<string,Status> Status (IEnumerable<string> files, Status onlyFilesWithThisStatus, bool showStatusPrefix, bool showCopiedSources, string fromRevision, string onlyRevision, string includePattern, string excludePattern, bool recurseSubRepositories)
+		/// <summary>
+		/// Show the status of files in the repository
+		/// </summary>
+		/// <param name='files'>
+		/// Only show status for these files
+		/// </param>
+		/// <param name='onlyFilesWithThisStatus'>
+		/// Only show files with this status
+		/// </param>
+		/// <param name='showCopiedSources'>
+		/// Show the sources of copied files
+		/// </param>
+		/// <param name='fromRevision'>
+		/// Show status changes between the current revision and this revision
+		/// </param>
+		/// <param name='onlyRevision'>
+		/// Only show status changes that occurred during this revision
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <param name='recurseSubRepositories'>
+		/// Recurse into subrepositories
+		/// </param>
+		/// <returns>
+		/// A dictionary mapping each file to its Status
+		/// </returns>
+		public IDictionary<string,Status> Status (IEnumerable<string> files, Status onlyFilesWithThisStatus, bool showCopiedSources, string fromRevision, string onlyRevision, string includePattern, string excludePattern, bool recurseSubRepositories)
 		{
 			var arguments = new List<string> (){ "status" };
 			
 			if (Mercurial.Status.Default != onlyFilesWithThisStatus) {
 				arguments.Add (ArgumentForStatus (onlyFilesWithThisStatus));
 			}
-			AddArgumentIf (arguments, !showStatusPrefix, "--no-status");
 			AddArgumentIf (arguments, showCopiedSources, "--copies");
 			AddNonemptyStringArgument (arguments, fromRevision, "--rev");
 			AddNonemptyStringArgument (arguments, onlyRevision, "--change");
@@ -197,11 +340,50 @@ namespace Mercurial
 			);
 		}
 		
+		/// <summary>
+		/// Commit changes into the repository
+		/// </summary>
+		/// <param name='message'>
+		/// Commit message
+		/// </param>
+		/// <param name='files'>
+		/// Files to commit, empty set will commit all changes reported by Status
+		/// </param>
 		public void Commit (string message, params string[] files)
 		{
 			Commit (message, files, false, false, null, null, null, DateTime.MinValue, null);
 		}
 		
+		/// <summary>
+		/// Commit changes into the repository
+		/// </summary>
+		/// <param name='message'>
+		/// Commit message
+		/// </param>
+		/// <param name='files'>
+		/// Files to commit, empty set will commit all changes reported by Status
+		/// </param>
+		/// <param name='addAndRemoveUnknowns'>
+		/// Mark new files as added and missing files as removed before committing
+		/// </param>
+		/// <param name='closeBranch'>
+		/// Mark a branch as closed
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <param name='messageLog'>
+		/// Read the commit message from this file
+		/// </param>
+		/// <param name='date'>
+		/// Record this as the commit date
+		/// </param>
+		/// <param name='user'>
+		/// Record this user as the committer
+		/// </param>
 		public void Commit (string message, IEnumerable<string> files, bool addAndRemoveUnknowns, bool closeBranch, string includePattern, string excludePattern, string messageLog, DateTime date, string user)
 		{
 			var arguments = new List<string> (){ "commit" };
@@ -220,11 +402,80 @@ namespace Mercurial
 			}
 		}
 		
+		/// <summary>
+		/// Get the revision history of the repository
+		/// </summary>
+		/// <param name='revisionRange'>
+		/// Log the specified revisions
+		/// </param>
+		/// <param name='files'>
+		/// Only get history for these files
+		/// </param>
+		/// <returns>
+		/// An ordered list of Revisions
+		/// </returns>
 		public IList<Revision> Log (string revisionRange, params string[] files)
 		{
 			return Log (revisionRange, files, false, false, DateTime.MinValue, DateTime.MinValue, false, null, false, false, false, null, null, null, 0, null, null);
 		}
 		
+		/// <summary>
+		/// Get the revision history of the repository
+		/// </summary>
+		/// <param name='revisionRange'>
+		/// Log the specified revisions
+		/// </param>
+		/// <param name='files'>
+		/// Only get history for these files
+		/// </param>
+		/// <param name='followAcrossCopy'>
+		/// Follow history across copies and renames
+		/// </param>
+		/// <param name='followFirstMergeParent'>
+		/// Only follow the first parent of merge changesets
+		/// </param>
+		/// <param name='fromDate'>
+		/// Log revisions beginning with this date (requires toDate)
+		/// </param>
+		/// <param name='toDate'>
+		/// Log revisions ending with this date (requires fromDate)
+		/// </param>
+		/// <param name='showCopiedFiles'>
+		/// Show copied files
+		/// </param>
+		/// <param name='searchText'>
+		/// Search case-insensitively for this text
+		/// </param>
+		/// <param name='showRemoves'>
+		/// Include revisions where files were removed
+		/// </param>
+		/// <param name='onlyMerges'>
+		/// Only log merges
+		/// </param>
+		/// <param name='excludeMerges'>
+		/// Don't log merges
+		/// </param>
+		/// <param name='user'>
+		/// Only log revisions committed by this user
+		/// </param>
+		/// <param name='branch'>
+		/// Only log changesets in this named branch
+		/// </param>
+		/// <param name='pruneRevisions'>
+		/// Do not log this revision nor its ancestors
+		/// </param>
+		/// <param name='limit'>
+		/// Only log this many changesets
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <returns>
+		/// An ordered list of Revisions
+		/// </returns>
 		public IList<Revision> Log (string revisionRange, IEnumerable<string> files, bool followAcrossCopy, bool followFirstMergeParent, DateTime fromDate, DateTime toDate, bool showCopiedFiles, string searchText, bool showRemoves, bool onlyMerges, bool excludeMerges, string user, string branch, string pruneRevisions, int limit, string includePattern, string excludePattern)
 		{
 			var arguments = new List<string> (){ "log", "--style", "xml" };
@@ -265,11 +516,38 @@ namespace Mercurial
 			}
 		}
 		
+		/// <summary>
+		/// Get heads
+		/// </summary>
+		/// <param name='revisions'>
+		/// If specified, only branch heads associated with these changesets will be returned
+		/// </param>
+		/// <returns>
+		/// A set of Revisions representing the heads
+		/// </returns>
 		public IEnumerable<Revision> Heads (params string[] revisions)
 		{
 			return Heads (revisions, null, false, false);
 		}
 		
+		/// <summary>
+		/// Get heads
+		/// </summary>
+		/// <param name='revisions'>
+		/// If specified, only branch heads associated with these changesets will be returned
+		/// </param>
+		/// <param name='startRevision'>
+		/// Only get heads which are descendants of this revision
+		/// </param>
+		/// <param name='onlyTopologicalHeads'>
+		/// Only get topological heads
+		/// </param>
+		/// <param name='showClosed'>
+		/// Also get heads of closed branches
+		/// </param>
+		/// <returns>
+		/// A set of Revisions representing the heads
+		/// </returns>
 		public IEnumerable<Revision> Heads (IEnumerable<string> revisions, string startRevision, bool onlyTopologicalHeads, bool showClosed)
 		{
 			var arguments = new List<string> (){ "heads", "--style", "xml" };
@@ -291,11 +569,65 @@ namespace Mercurial
 			}
 		}
 		
+		/// <summary>
+		/// Get line-specific changeset information
+		/// </summary>
+		/// <param name='revision'>
+		/// Annotate this revision
+		/// </param>
+		/// <param name='files'>
+		/// Annotate these files
+		/// </param>
+		/// <returns>
+		/// Raw annotation data
+		/// </returns>
 		public string Annotate (string revision, params string[] files)
 		{
 			return Annotate (revision, files, true, false, true, false, false, true, false, false, null, null);
 		}
 		
+		/// <summary>
+		/// Get line-specific changeset information
+		/// </summary>
+		/// <param name='revision'>
+		/// Annotate this revision
+		/// </param>
+		/// <param name='files'>
+		/// Annotate these files
+		/// </param>
+		/// <param name='followCopies'>
+		/// Follow copies and renames
+		/// </param>
+		/// <param name='annotateBinaries'>
+		/// Annotate all files as though they were text
+		/// </param>
+		/// <param name='showAuthor'>
+		/// List the author
+		/// </param>
+		/// <param name='showFilename'>
+		/// List the filename
+		/// </param>
+		/// <param name='showDate'>
+		/// List the date
+		/// </param>
+		/// <param name='showRevision'>
+		/// List the revision number
+		/// </param>
+		/// <param name='showChangeset'>
+		/// List the changeset ID (hash)
+		/// </param>
+		/// <param name='showLine'>
+		/// List the line number
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <returns>
+		/// Raw annotation data
+		/// </returns>
 		public string Annotate (string revision, IEnumerable<string> files, bool followCopies, bool annotateBinaries, bool showAuthor, bool showFilename, bool showDate, bool showRevision, bool showChangeset, bool showLine, string includePattern, string excludePattern)
 		{
 			List<string > arguments = new List<string> (){ "annotate" };
@@ -321,11 +653,74 @@ namespace Mercurial
 			return result.Output;
 		}
 		
+		/// <summary>
+		/// Get differences between revisions
+		/// </summary>
+		/// <param name='revision'>
+		/// Get changes from this revision
+		/// </param>
+		/// <param name='files'>
+		/// Get changes for these files
+		/// </param>
+		/// <returns>
+		/// A unified diff
+		/// </returns>
 		public string Diff (string revision, params string[] files)
 		{
 			return Diff (revision, files, null, false, false, true, false, false, false, false, false, 0, null, null, false);
 		}
 		
+		/// <summary>
+		/// Get differences between revisions
+		/// </summary>
+		/// <param name='revision'>
+		/// Get changes from this revision
+		/// </param>
+		/// <param name='files'>
+		/// Get changes for these files
+		/// </param>
+		/// <param name='changeset'>
+		/// Only get changes introduced by this changeset
+		/// </param>
+		/// <param name='diffBinaries'>
+		/// Diff all files as though they were text
+		/// </param>
+		/// <param name='useGitFormat'>
+		/// Use git-style extended diff format
+		/// </param>
+		/// <param name='showDates'>
+		/// Show dates in diff headers
+		/// </param>
+		/// <param name='showFunctionNames'>
+		/// Show the function name for each change
+		/// </param>
+		/// <param name='reverse'>
+		/// Create a reverse diff
+		/// </param>
+		/// <param name='ignoreWhitespace'>
+		/// Ignore all whitespace
+		/// </param>
+		/// <param name='ignoreWhitespaceOnlyChanges'>
+		/// Ignore changes in the amount of whitespace
+		/// </param>
+		/// <param name='ignoreBlankLines'>
+		/// Ignore changes whose lines are all blank
+		/// </param>
+		/// <param name='contextLines'>
+		/// Use this many lines of context
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <param name='recurseSubRepositories'>
+		/// Recurse into subrepositories
+		/// </param>
+		/// <returns>
+		/// A unified diff
+		/// </returns>
 		public string Diff (string revision, IEnumerable<string> files, string changeset, bool diffBinaries, bool useGitFormat, bool showDates, bool showFunctionNames, bool reverse, bool ignoreWhitespace, bool ignoreWhitespaceOnlyChanges, bool ignoreBlankLines, int contextLines, string includePattern, string excludePattern, bool recurseSubRepositories)
 		{
 			var arguments = new List<string> (){ "diff" };
@@ -355,11 +750,50 @@ namespace Mercurial
 			return result.Output;
 		}
 		
+		/// <summary>
+		/// Export the header and diffs for one or more changesets
+		/// </summary>
+		/// <param name='revisions'>
+		/// Export these revisions
+		/// </param>
+		/// <exception cref='ArgumentException'>
+		/// Is thrown when revisions is empty
+		/// </exception>
+		/// <returns>
+		/// The output of the export
+		/// </returns>
 		public string Export (params string[] revisions)
 		{
 			return Export (revisions, null, false, false, false, true);
 		}
 		
+		/// <summary>
+		/// Export the header and diffs for one or more changesets
+		/// </summary>
+		/// <param name='revisions'>
+		/// Export these revisions
+		/// </param>
+		/// <param name='outputFile'>
+		/// Export output to a file with this formatted name
+		/// </param>
+		/// <param name='switchParent'>
+		/// Diff against the second parent, instead of the first
+		/// </param>
+		/// <param name='diffBinaries'>
+		/// Diff all files as though they were text
+		/// </param>
+		/// <param name='useGitFormat'>
+		/// Use git-style extended diff format
+		/// </param>
+		/// <param name='showDates'>
+		/// Show dates in diff headers
+		/// </param>
+		/// <exception cref='ArgumentException'>
+		/// Is thrown when revisions is empty
+		/// </exception>
+		/// <returns>
+		/// The output of the export
+		/// </returns>
 		public string Export (IEnumerable<string> revisions, string outputFile, bool switchParent, bool diffBinaries, bool useGitFormat, bool showDates)
 		{
 			if (null == revisions || 0 == revisions.Count ())
@@ -379,11 +813,35 @@ namespace Mercurial
 			return result.Output;
 		}
 		
+		/// <summary>
+		/// Mark the specified files so that they will no longer be tracked after the next commit
+		/// </summary>
+		/// <param name='files'>
+		/// Forget these files
+		/// </param>
+		/// <exception cref='ArgumentException'>
+		/// Is thrown when an empty file list is passed
+		/// </exception>
 		public void Forget (params string[] files)
 		{
 			Forget (files, null, null);
 		}
 		
+		/// <summary>
+		/// Mark the specified files so that they will no longer be tracked after the next commit
+		/// </summary>
+		/// <param name='files'>
+		/// Forget these files
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <exception cref='ArgumentException'>
+		/// Is thrown when an empty file list is passed
+		/// </exception>
 		public void Forget (IEnumerable<string> files, string includePattern, string excludePattern)
 		{
 			if (null == files || 0 == files.Count ())
@@ -397,11 +855,40 @@ namespace Mercurial
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error forgetting {0}", string.Join (",", files.ToArray ())));
 		}
 		
+		/// <summary>
+		/// Merge the working copy with another revision
+		/// </summary>
+		/// <param name='revision'>
+		/// Merge with this revision
+		/// </param>
+		/// <returns>
+		/// true if the merge succeeded with no unresolved files, 
+		/// false if there are unresolved files
+		/// </returns>
 		public bool Merge (string revision)
 		{
 			return Merge (revision, false, null, false);
 		}
 		
+		/// <summary>
+		/// Merge the working copy with another revision
+		/// </summary>
+		/// <param name='revision'>
+		/// Merge with this revision
+		/// </param>
+		/// <param name='force'>
+		/// Force a merge, even though the working copy has uncommitted changes
+		/// </param>
+		/// <param name='mergeTool'>
+		/// Use this merge tool
+		/// </param>
+		/// <param name='dryRun'>
+		/// Attempt merge without actually merging
+		/// </param>
+		/// <returns>
+		/// true if the merge succeeded with no unresolved files, 
+		/// false if there are unresolved files
+		/// </returns>
 		public bool Merge (string revision, bool force, string mergeTool, bool dryRun)
 		{
 			var arguments = new List<string> (){ "merge" };
@@ -418,11 +905,43 @@ namespace Mercurial
 			return (0 == result.Result);
 		}
 		
+		/// <summary>
+		/// Pull changes from another repository
+		/// </summary>
+		/// <param name='source'>
+		/// Pull changes from this repository
+		/// </param>
+		/// <returns>
+		/// true if the pull succeeded with no unresolved files, 
+		/// false if there are unresolved files
+		/// </returns>
 		public bool Pull (string source)
 		{
 			return Pull (source, null, false, false, null);
 		}
 		
+		/// <summary>
+		/// Pull changes from another repository
+		/// </summary>
+		/// <param name='source'>
+		/// Pull changes from this repository
+		/// </param>
+		/// <param name='toRevision'>
+		/// Pull changes up to this revision
+		/// </param>
+		/// <param name='update'>
+		/// Update to new branch head
+		/// </param>
+		/// <param name='force'>
+		/// Force pulling changes if source repository is unrelated
+		/// </param>
+		/// <param name='branch'>
+		/// Only pull this branch
+		/// </param>
+		/// <returns>
+		/// true if the pull succeeded with no unresolved files, 
+		/// false if there are unresolved files
+		/// </returns>
 		public bool Pull (string source, string toRevision, bool update, bool force, string branch)
 		{
 			var arguments = new List<string> (){ "pull" };
@@ -440,11 +959,44 @@ namespace Mercurial
 			return (0 == result.Result);
 		}
 		
+		/// <summary>
+		/// Push changesets to another repository
+		/// </summary>
+		/// <param name='destination'>
+		/// Push changes to this repository
+		/// </param>
+		/// <param name='toRevision'>
+		/// Push up to this revision
+		/// </param>
+		/// <returns>
+		/// Whether any changesets were pushed
+		/// </returns>
 		public bool Push (string destination, string toRevision)
 		{
 			return Push (destination, toRevision, false, null, false);
 		}
 		
+		/// <summary>
+		/// Push changesets to another repository
+		/// </summary>
+		/// <param name='destination'>
+		/// Push changes to this repository
+		/// </param>
+		/// <param name='toRevision'>
+		/// Push up to this revision
+		/// </param>
+		/// <param name='force'>
+		/// Force push
+		/// </param>
+		/// <param name='branch'>
+		/// Push only this branch
+		/// </param>
+		/// <param name='allowNewBranch'>
+		/// Allow new branches to be pushed
+		/// </param>
+		/// <returns>
+		/// Whether any changesets were pushed
+		/// </returns>
 		public bool Push (string destination, string toRevision, bool force, string branch, bool allowNewBranch)
 		{
 			var arguments = new List<string> (){ "push" };
@@ -461,11 +1013,40 @@ namespace Mercurial
 			return 0 == result.Result;
 		}
 		
+		/// <summary>
+		/// Update the working copy
+		/// </summary>
+		/// <param name='revision'>
+		/// Update to this revision, or tip if empty
+		/// </param>
+		/// <returns>
+		/// true if the update succeeded with no unresolved files, 
+		/// false if there are unresolved files
+		/// </returns>
 		public bool Update (string revision)
 		{
 			return Update (revision, false, false, DateTime.MinValue);
 		}
 		
+		/// <summary>
+		/// Update the working copy
+		/// </summary>
+		/// <param name='revision'>
+		/// Update to this revision, or tip if empty
+		/// </param>
+		/// <param name='discardUncommittedChanges'>
+		/// Discard uncommitted changes
+		/// </param>
+		/// <param name='updateAcrossBranches'>
+		/// Update across branches (if there are no uncommitted changes)
+		/// </param>
+		/// <param name='toDate'>
+		/// Update to the tipmost revision matching this date
+		/// </param>
+		/// <returns>
+		/// true if the update succeeded with no unresolved files, 
+		/// false if there are unresolved files
+		/// </returns>
 		public bool Update (string revision, bool discardUncommittedChanges, bool updateAcrossBranches, DateTime toDate)
 		{
 			var arguments = new List<string> (){ "update" };
@@ -482,6 +1063,15 @@ namespace Mercurial
 			return (0 == result.Result);
 		}
 		
+		/// <summary>
+		/// Summarize the state of the working copy
+		/// </summary>
+		/// <param name='remote'>
+		/// Check for incoming and outgoing changes on the default paths
+		/// </param>
+		/// <returns>
+		/// The summary text
+		/// </returns>
 		public string Summary (bool remote)
 		{
 			var arguments = new List<string> (){ "summary" };
@@ -549,6 +1139,27 @@ namespace Mercurial
 			return message;
 		}
 		
+		/// <summary>
+		/// Sends a command to the command server
+		/// </summary>
+		/// <remarks>
+		/// You probably want GetCommandOutput instead
+		/// </remarks>
+		/// <param name='command'>
+		/// A list of arguments, beginning with the command
+		/// </param>
+		/// <param name='outputs'>
+		/// A dictionary mapping each relevant output channel to a stream which will capture its output
+		/// </param>
+		/// <param name='inputs'>
+		/// A dictionary mapping each relevant input channel to a callback which will provide data on request
+		/// </param>
+		/// <exception cref='ArgumentException'>
+		/// Is thrown when command is empty
+		/// </exception>
+		/// <returns>
+		/// The return value of the command
+		/// </returns>
 		public int RunCommand (IList<string> command,
 		                       IDictionary<CommandChannel,Stream> outputs,
 		                       IDictionary<CommandChannel,Func<uint,byte[]>> inputs)
@@ -602,6 +1213,21 @@ namespace Mercurial
 			}
 		}
 		
+		/// <summary>
+		/// Sends a command to the command server and captures its output
+		/// </summary>
+		/// <param name='command'>
+		/// A list of arguments, beginning with the command
+		/// </param>
+		/// <param name='inputs'>
+		/// A dictionary mapping each relevant input channel to a callback which will provide data on request
+		/// </param>
+		/// <exception cref='ArgumentException'>
+		/// Is thrown when command is empty
+		/// </exception>
+		/// <returns>
+		/// A CommandResult containing the captured output and error streams
+		/// </returns>
 		public CommandResult GetCommandOutput (IList<string> command,
 		                                       IDictionary<CommandChannel,Func<uint,byte[]>> inputs)
 		{
@@ -627,6 +1253,15 @@ namespace Mercurial
 
 		#region IDisposable implementation
 		
+		/// <summary>
+		/// Releases all resources used by the <see cref="Mercurial.CommandClient"/> object.
+		/// </summary>
+		/// <remarks>
+		/// Call <see cref="Dispose"/> when you are finished using the <see cref="Mercurial.CommandClient"/>. The
+		/// <see cref="Dispose"/> method leaves the <see cref="Mercurial.CommandClient"/> in an unusable state. After calling
+		/// <see cref="Dispose"/>, you must release all references to the <see cref="Mercurial.CommandClient"/> so the garbage
+		/// collector can reclaim the memory that the <see cref="Mercurial.CommandClient"/> was occupying.
+		/// </remarks>
 		public void Dispose ()
 		{
 			Close ();
@@ -638,6 +1273,25 @@ namespace Mercurial
 		
 		#region Utility
 		
+		/// <summary>
+		/// Reads an int from a buffer in network byte order
+		/// </summary>
+		/// <param name='buffer'>
+		/// Read from this buffer
+		/// </param>
+		/// <param name='offset'>
+		/// Begin reading at this offset
+		/// </param>
+		/// <exception cref='ArgumentNullException'>
+		/// Is thrown when buffer is null
+		/// </exception>
+		/// <exception cref='ArgumentOutOfRangeException'>
+		/// Is thrown when buffer is not long enough to read an int, 
+		/// beginning at offset
+		/// </exception>
+		/// <returns>
+		/// The int
+		/// </returns>
 		internal static int ReadInt (byte[] buffer, int offset)
 		{
 			if (null == buffer) throw new ArgumentNullException ("buffer");
@@ -646,6 +1300,25 @@ namespace Mercurial
 			return IPAddress.NetworkToHostOrder (BitConverter.ToInt32 (buffer, offset));
 		}
 		
+		/// <summary>
+		/// Reads an unsigned int from a buffer in network byte order
+		/// </summary>
+		/// <param name='buffer'>
+		/// Read from this buffer
+		/// </param>
+		/// <param name='offset'>
+		/// Begin reading at this offset
+		/// </param>
+		/// <exception cref='ArgumentNullException'>
+		/// Is thrown when buffer is null
+		/// </exception>
+		/// <exception cref='ArgumentOutOfRangeException'>
+		/// Is thrown when buffer is not long enough to read an unsigned int, 
+		/// beginning at offset
+		/// </exception>
+		/// <returns>
+		/// The unsigned int
+		/// </returns>
 		internal static uint ReadUint (byte[] buffer, int offset)
 		{
 			if (null == buffer)
@@ -656,6 +1329,18 @@ namespace Mercurial
 			return (uint)IPAddress.NetworkToHostOrder (BitConverter.ToInt32 (buffer, offset));
 		}
 		
+		/// <summary>
+		/// Gets the CommandChannel represented by the first byte of a buffer
+		/// </summary>
+		/// <param name='header'>
+		/// Read from this buffer
+		/// </param>
+		/// <exception cref='ArgumentException'>
+		/// Is thrown when no valid CommandChannel is represented
+		/// </exception>
+		/// <returns>
+		/// The CommandChannel
+		/// </returns>
 		internal static CommandChannel CommandChannelFromFirstByte (byte[] header)
 		{
 			char[] identifier = ASCIIEncoding.ASCII.GetChars (header, 0, 1);
@@ -678,6 +1363,9 @@ namespace Mercurial
 			}
 		}
 		
+		/// <summary>
+		/// Gets the byte representative of a CommandChannel
+		/// </summary>
 		internal static byte CommandChannelToByte (CommandChannel channel)
 		{
 			string identifier;
@@ -709,6 +1397,18 @@ namespace Mercurial
 			return bytes[0];
 		}
 		
+		/// <summary>
+		/// Parses a delimited string into a dictionary
+		/// </summary>
+		/// <param name='input'>
+		/// Parse this string
+		/// </param>
+		/// <param name='delimiters'>
+		/// Split on these delimiters
+		/// </param>
+		/// <returns>
+		/// The dictionary
+		/// </returns>
 		internal static Dictionary<string,string> ParseDictionary (string input, string[] delimiters)
 		{
 			Dictionary<string,string > headers = input.Split ('\n')
@@ -725,13 +1425,37 @@ namespace Mercurial
 		}
 		
 
-		internal static void AddArgumentIf (IList<string> arguments, bool condition, string argument)
+		/// <summary>
+		/// Conditionally add a string to a collection
+		/// </summary>
+		/// <param name='arguments'>
+		/// The collection
+		/// </param>
+		/// <param name='condition'>
+		/// The condition
+		/// </param>
+		/// <param name='argument'>
+		/// The argument to add
+		/// </param>
+		internal static void AddArgumentIf (ICollection<string> arguments, bool condition, string argument)
 		{
 			if (condition) arguments.Add (argument);
 		}
 		
 
-		internal static void AddNonemptyStringArgument (IList<string> arguments, string argument, string argumentPrefix)
+		/// <summary>
+		/// Conditionally add two strings to a collection
+		/// </summary>
+		/// <param name='arguments'>
+		/// The collection
+		/// </param>
+		/// <param name='argument'>
+		/// If this is not empty, add this, prefixed by argumentPrefix
+		/// </param>
+		/// <param name='argumentPrefix'>
+		/// The prefix to be added
+		/// </param>
+		internal static void AddNonemptyStringArgument (ICollection<string> arguments, string argument, string argumentPrefix)
 		{
 			if (!string.IsNullOrEmpty (argument)) {
 				arguments.Add (argumentPrefix);
@@ -739,7 +1463,19 @@ namespace Mercurial
 			}
 		}
 		
-		internal static void AddFormattedDateArgument (IList<string> arguments, DateTime date, string datePrefix)
+		/// <summary>
+		/// Conditionally add a formatted date argument to a collection
+		/// </summary>
+		/// <param name='arguments'>
+		/// The collection
+		/// </param>
+		/// <param name='date'>
+		/// If this is not DateTime.MinValue, add this, prefixed by datePrefix
+		/// </param>
+		/// <param name='datePrefix'>
+		/// The prefix to be added
+		/// </param>
+		internal static void AddFormattedDateArgument (ICollection<string> arguments, DateTime date, string datePrefix)
 		{
 			if (DateTime.MinValue != date) {
 				arguments.Add (datePrefix);
@@ -755,6 +1491,9 @@ namespace Mercurial
 			return result;
 		}
 		
+		/// <summary>
+		/// Get a string argument representing a Status
+		/// </summary>
 		internal static string ArgumentForStatus (Mercurial.Status status)
 		{
 			switch (status) {
@@ -779,6 +1518,9 @@ namespace Mercurial
 			}
 		}
 		
+		/// <summary>
+		/// Parse a status from its indicator text
+		/// </summary>
 		public static Mercurial.Status ParseStatus (string input)
 		{
 			switch (input) {
@@ -803,6 +1545,9 @@ namespace Mercurial
 			}
 		}
 		
+		/// <summary>
+		/// Parse an xml log into a list of revisions
+		/// </summary>
 		internal static IList<Revision> ParseRevisionsFromLog (string xmlText)
 		{
 			XmlDocument document = new XmlDocument ();

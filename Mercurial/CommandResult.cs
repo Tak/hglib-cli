@@ -23,13 +23,27 @@ using System;
 
 namespace Mercurial
 {
+	/// <summary>
+	/// Represents the result of a command
+	/// </summary>
 	public class CommandResult
 	{
+		/// <summary>
+		/// The output from the command
+		/// </summary>
 		public string Output { get; private set; }
+		
+		/// <summary>
+		/// The error output from the command
+		/// </summary>
 		public string Error { get; private set; }
+		
+		/// <summary>
+		/// The result code from the command
+		/// </summary>
 		public int Result { get; private set; }
 
-		public CommandResult (string output, string error, int result)
+		internal CommandResult (string output, string error, int result)
 		{
 			Output = output;
 			Error = error;

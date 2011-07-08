@@ -24,14 +24,32 @@ using System.Xml;
 
 namespace Mercurial
 {
+	/// <summary>
+	/// Represents a mercurial revision
+	/// </summary>
 	public class Revision
 	{
+		/// <summary>
+		/// The revision number
+		/// </summary>
 		public string RevisionId { get; private set; }
+		
+		/// <summary>
+		/// The date the revision was created
+		/// </summary>
 		public DateTime Date { get; private set; }
+		
+		/// <summary>
+		/// The author of the revision
+		/// </summary>
 		public string Author { get; private set; }
+		
+		/// <summary>
+		/// The commit message for the revision
+		/// </summary>
 		public string Message { get; private set; }
 		
-		public Revision (string revision, DateTime date, string author, string message)
+		internal Revision (string revision, DateTime date, string author, string message)
 		{
 			RevisionId = revision;
 			Date = date;

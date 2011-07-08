@@ -23,14 +23,17 @@ using System;
 
 namespace Mercurial
 {
+	/// <summary>
+	/// An exception communicating with the command server
+	/// </summary>
 	public class ServerException: Exception
 	{
-		public ServerException (string message):
+		internal ServerException (string message):
 			base (message)
 		{
 		}
 		
-		public ServerException (string message, Exception innerException):
+		internal ServerException (string message, Exception innerException):
 			base (message, innerException)
 		{
 		}

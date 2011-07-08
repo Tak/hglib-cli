@@ -23,6 +23,9 @@ using System;
 
 namespace Mercurial
 {
+	/// <summary>
+	/// Represents a mercurial status
+	/// </summary>
 	public enum Status
 	{
 		Default,
