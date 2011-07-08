@@ -32,7 +32,7 @@ namespace Mercurial
 {
 	public class CommandClient: IDisposable
 	{
-		static readonly string MercurialPath = "/home/levi/Code/mercurial/hg";
+		static readonly string MercurialPath = "hg";
 		static readonly string MercurialEncodingKey = "HGENCODING";
 		static readonly int MercurialHeaderLength = 5;
 		
