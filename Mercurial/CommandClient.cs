@@ -256,7 +256,7 @@ namespace Mercurial
 			CommandResult result = GetCommandOutput (arguments, null);
 			ThrowOnFail (result, 0, "Error getting log");
 			
-			Console.WriteLine (result.Output);
+			// Console.WriteLine (result.Output);
 			
 			try {
 				return ParseRevisionsFromLog (result.Output);
