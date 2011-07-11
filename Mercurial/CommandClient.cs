@@ -517,6 +517,84 @@ namespace Mercurial
 		}
 		
 		/// <summary>
+		/// Show new changesets in another repository
+		/// </summary>
+		/// <param name="source">
+		/// Check this repository for incoming changesets
+		/// </param>
+		/// <param name="toRevision">
+		/// Check up to this revision
+		/// </param>
+		/// <returns>
+		/// An ordered list of revisions
+		/// </returns>
+		public IList<Revision> Incoming (string source, string toRevision)
+		{
+			return Incoming (source, toRevision, false, false, null, null, 0, true, false);
+		}
+
+		/// <summary>
+		/// Show new changesets in another repository
+		/// </summary>
+		/// <param name="source">
+		/// Check this repository for incoming changesets
+		/// </param>
+		/// <param name="toRevision">
+		/// Check up to this revision
+		/// </param>
+		/// <param name="force">
+		/// Check even if the remote repository is unrelated
+		/// </param>
+		/// <param name="showNewestFirst">
+		/// Get the newest changesets first
+		/// </param>
+		/// <param name="bundleFile">
+		/// Store downloaded changesets here
+		/// </param>
+		/// <param name="branch">
+		/// Only check this branch
+		/// </param>
+		/// <param name="limit">
+		/// Only retrieve this many changesets
+		/// </param>
+		/// <param name="showMerges">
+		/// Show merges
+		/// </param>
+		/// <param name="recurseSubRepos">
+		/// Recurse into subrepositories
+		/// </param>
+		/// <returns>
+		/// An ordered list of revisions
+		/// </returns>
+		public IList<Revision> Incoming (string source, string toRevision, bool force, bool showNewestFirst, string bundleFile, string branch, int limit, bool showMerges, bool recurseSubRepos)
+		{
+			var arguments = new List<string> (){ "incoming", "--style", "xml" };
+			AddNonemptyStringArgument (arguments, toRevision, "--rev");
+			AddArgumentIf (arguments, force, "--force");
+			AddArgumentIf (arguments, showNewestFirst, "--newest-first");
+			AddNonemptyStringArgument (arguments, bundleFile, "--bundle");
+			AddNonemptyStringArgument (arguments, branch, "--branch");
+			AddArgumentIf (arguments, !showMerges, "--no-merges");
+			AddArgumentIf (arguments, recurseSubRepos, "--subrepos");
+			if (0 < limit) {
+				arguments.Add ("--limit");
+				arguments.Add (limit.ToString ());
+			}
+			AddArgumentIf (arguments, !string.IsNullOrEmpty (source), source);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			ThrowOnFail (result, 0, "Error getting incoming");
+			
+			try {
+				int index = result.Output.IndexOf ("<?xml");
+				if (0 > index) return new List<Revision> ();
+				return ParseRevisionsFromLog (result.Output.Substring (index));
+			} catch (XmlException ex) {
+				throw new CommandException ("Error getting incoming", ex);
+			}
+		}
+		
+		/// <summary>
 		/// Get heads
 		/// </summary>
 		/// <param name='revisions'>
