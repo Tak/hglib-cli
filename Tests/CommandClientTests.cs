@@ -471,12 +471,52 @@ namespace Mercurial.Tests
 				secondClient = new CommandClient (secondPath, null, null);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
+				// Add changesets to original repo
+				File.WriteAllText (file, "2");
+				firstClient.Commit ("2");
+				File.WriteAllText (file, "3");
+				firstClient.Commit ("3");
+				
+				IList<Revision > incoming = secondClient.Incoming (null, null);
+				Assert.AreEqual (2, incoming.Count, "Unexpected number of incoming changesets");
+			} finally {
+				if (null != firstClient)
+					firstClient.Dispose ();
+				if (null != secondClient)
+					secondClient.Dispose ();
+			}
+		}
+
+		[Test]
+		public void TestOutgoing ()
+		{
+			string firstPath = GetTemporaryPath ();
+			string secondPath = GetTemporaryPath ();
+			string file = Path.Combine (firstPath, "foo");
+			CommandClient.Initialize (firstPath);
+			CommandClient firstClient = null,
+			              secondClient = null;
+			
+			try {
+				// Create repo with one commit
+				firstClient = new CommandClient (firstPath, null, null);
+				File.WriteAllText (file, "1");
+				firstClient.Add (file);
+				firstClient.Commit ("1");
+			
+				// Clone repo
+				CommandClient.Clone (firstPath, secondPath);
+				secondClient = new CommandClient (secondPath, null, null);
+				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
+				
 				// Add changeset to original repo
 				File.WriteAllText (file, "2");
 				firstClient.Commit ("2");
+				File.WriteAllText (file, "3");
+				firstClient.Commit ("3");
 				
-				IList<Revision > incoming = secondClient.Incoming (null, null);
-				Assert.AreEqual (1, incoming.Count, "Unexpected number of incoming changesets");
+				IList<Revision > outgoing = firstClient.Outgoing (secondPath, null);
+				Assert.AreEqual (2, outgoing.Count, "Unexpected number of outgoing changesets");
 			} finally {
 				if (null != firstClient)
 					firstClient.Dispose ();
