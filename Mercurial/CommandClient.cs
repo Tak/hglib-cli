@@ -35,7 +35,7 @@ namespace Mercurial
 	/// </summary>
 	public class CommandClient: IDisposable
 	{
-		static readonly string MercurialPath = "hg";
+		static readonly string DefaultMercurialPath = "hg";
 		static readonly string MercurialEncodingKey = "HGENCODING";
 		static readonly int MercurialHeaderLength = 5;
 		
@@ -95,10 +95,13 @@ namespace Mercurial
 		/// <param name='configs'>
 		/// A configuration dictionary to be passed to the command server
 		/// </param>
-		public CommandClient (string path, string encoding, IDictionary<string,string> configs)
+		public CommandClient (string path, string encoding, IDictionary<string,string> configs, string mercurialPath)
 		{
 			var arguments = new StringBuilder ("serve --cmdserver pipe ");
 			
+			if (string.IsNullOrEmpty (mercurialPath)) {
+				mercurialPath = DefaultMercurialPath;
+			}
 			if (!string.IsNullOrEmpty (path)) {
 				arguments.AppendFormat ("-R {0} ", path);
 			}
@@ -112,7 +115,7 @@ namespace Mercurial
 				));
 			}
 			
-			ProcessStartInfo commandServerInfo = new ProcessStartInfo (MercurialPath, arguments.ToString ());
+			ProcessStartInfo commandServerInfo = new ProcessStartInfo (mercurialPath, arguments.ToString ());
 			if (null != encoding) {
 				commandServerInfo.EnvironmentVariables [MercurialEncodingKey] = encoding;
 			}
@@ -140,9 +143,9 @@ namespace Mercurial
 		/// <param name='destination'>
 		/// The directory in which to create the repository
 		/// </param>
-		public static void Initialize (string destination)
+		public static void Initialize (string destination, string mercurialPath)
 		{
-			using (var client = new CommandClient (null, null, null)) {
+			using (var client = new CommandClient (null, null, null, mercurialPath)) {
 				client.InitializeInternal (destination);
 			}
 		}
@@ -161,9 +164,9 @@ namespace Mercurial
 		/// <param name='destination'>
 		/// The path to the local destination for the clone
 		/// </param>
-		public static void Clone (string source, string destination)
+		public static void Clone (string source, string destination, string mercurialPath)
 		{
-			Clone (source, destination, true, null, null, null, false, true);
+			Clone (source, destination, true, null, null, null, false, true, mercurialPath);
 		}
 		
 		/// <summary>
@@ -195,9 +198,9 @@ namespace Mercurial
 		/// <param name='compressData'>
 		/// Compress changesets for transfer
 		/// </param>
-		public static void Clone (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData)
+		public static void Clone (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData, string mercurialPath)
 		{
-			using (var client = new CommandClient (null, null, null)) {
+			using (var client = new CommandClient (null, null, null, mercurialPath)) {
 				client.CloneInternal (source, destination, updateWorkingCopy, updateToRevision, cloneToRevision, onlyCloneBranch, forcePullProtocol, compressData);
 			}
 		}

@@ -35,6 +35,7 @@ namespace Mercurial.Tests
 	{
 		static readonly string TestRepo = "http://selenic.com/hg";
 		static List<string> garbage = new List<string> ();
+		static readonly string MercurialPath = "hg";
 		
 		[SetUp]
 		public void Setup ()
@@ -56,14 +57,14 @@ namespace Mercurial.Tests
 		[Test]
 		public void TestConnection ()
 		{
-			using (new CommandClient (null, null, null)) {
+			using (new CommandClient (null, null, null, MercurialPath)) {
 			}
 		}
 		
 		[Test]
 		public void TestConfiguration ()
 		{
-			using (CommandClient client = new CommandClient (null, null, null)) {
+			using (CommandClient client = new CommandClient (null, null, null, MercurialPath)) {
 				IDictionary<string,string > config = client.Configuration;
 				Assert.IsNotNull (config);
 				Assert.Greater (config.Count, 0, "Expecting nonempty configuration");
@@ -75,7 +76,7 @@ namespace Mercurial.Tests
 		public void TestInitialize ()
 		{
 			string path = GetTemporaryPath ();
-			CommandClient.Initialize (path);
+			CommandClient.Initialize (path, MercurialPath);
 			Assert.That (Directory.Exists (Path.Combine (path, ".hg")), string.Format ("Repository was not created at {0}", path));
 		}
 		
@@ -83,10 +84,10 @@ namespace Mercurial.Tests
 		public void TestRoot ()
 		{
 			string path = GetTemporaryPath ();
-			CommandClient.Initialize (path);
+			CommandClient.Initialize (path, MercurialPath);
 			Assert.That (Directory.Exists (Path.Combine (path, ".hg")), string.Format ("Repository was not created at {0}", path));
 			
-			using (var client = new CommandClient (path, null, null)) {
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				Assert.AreEqual (path, client.Root, "Unexpected repository root");
 			}
 		}
@@ -96,7 +97,7 @@ namespace Mercurial.Tests
 		public void TestCloneRemote ()
 		{
 			string path = GetTemporaryPath ();
-			CommandClient.Clone (TestRepo, path, true, null, "10", null, false, true);
+			CommandClient.Clone (TestRepo, path, true, null, "10", null, false, true, MercurialPath);
 			Assert.That (Directory.Exists (Path.Combine (path, ".hg")), string.Format ("Repository was not cloned from {0} to {1}", TestRepo, path));
 		}
 		
@@ -106,19 +107,19 @@ namespace Mercurial.Tests
 			string firstPath = GetTemporaryPath ();
 			string secondPath = GetTemporaryPath ();
 			string file = Path.Combine (firstPath, "foo");
-			CommandClient.Initialize (firstPath);
+			CommandClient.Initialize (firstPath, MercurialPath);
 			
-			using (var client = new CommandClient (firstPath, null, null)) {
+			using (var client = new CommandClient (firstPath, null, null, MercurialPath)) {
 				File.WriteAllText (file, "1");
 				client.Add (file);
 				client.Commit ("1");
 			}
 			
-			CommandClient.Clone (firstPath, secondPath);
+			CommandClient.Clone (firstPath, secondPath, MercurialPath);
 			Assert.That (Directory.Exists (Path.Combine (secondPath, ".hg")), string.Format ("Repository was not cloned from {0} to {1}", firstPath, secondPath));
 			Assert.That (File.Exists (Path.Combine (secondPath, "foo")), "foo doesn't exist in cloned working copy");
 				
-			using (var client = new CommandClient (secondPath, null, null)) {
+			using (var client = new CommandClient (secondPath, null, null, MercurialPath)) {
 				IList<Revision> log = client.Log (null);
 				Assert.AreEqual (1, log.Count, "Unexpected number of log entries");
 			}
@@ -130,8 +131,8 @@ namespace Mercurial.Tests
 			string path = GetTemporaryPath ();
 			IDictionary<string,Status > statuses = null;
 			
-			CommandClient.Initialize (path);
-			using (var client = new CommandClient (path, null, null)) {
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (Path.Combine (path, "foo"), string.Empty);
 				File.WriteAllText (Path.Combine (path, "bar"), string.Empty);
 				client.Add (Path.Combine (path, "foo"), Path.Combine (path, "bar"));
@@ -149,8 +150,8 @@ namespace Mercurial.Tests
 		public void TestCommit ()
 		{
 			string path = GetTemporaryPath ();
-			CommandClient.Initialize (path);
-			using (var client = new CommandClient (path, null, null)) {
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (Path.Combine (path, "foo"), string.Empty);
 				File.WriteAllText (Path.Combine (path, "bar"), string.Empty);
 				client.Add (Path.Combine (path, "foo"));
@@ -169,9 +170,9 @@ namespace Mercurial.Tests
 		{
 			string path = GetTemporaryPath ();
 			string file = Path.Combine (path, "foo");
-			CommandClient.Initialize (path);
+			CommandClient.Initialize (path, MercurialPath);
 			
-			using (var client = new CommandClient (path, null, null)) {
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (file, "1");
 				client.Add (file);
 				client.Commit ("1");
@@ -186,9 +187,9 @@ namespace Mercurial.Tests
 		{
 			string path = GetTemporaryPath ();
 			string file = Path.Combine (path, "foo");
-			CommandClient.Initialize (path);
+			CommandClient.Initialize (path, MercurialPath);
 			
-			using (var client = new CommandClient (path, null, null)) {
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (file, "1");
 				client.Add (file);
 				client.Commit ("1", null, false, false, null, null, null, DateTime.MinValue, "user");
@@ -202,9 +203,9 @@ namespace Mercurial.Tests
 			string path = GetTemporaryPath ();
 			string file = Path.Combine (path, "foo");
 			string diffText = string.Empty;
-			CommandClient.Initialize (path);
+			CommandClient.Initialize (path, MercurialPath);
 			
-			using (var client = new CommandClient (path, null, null)) {
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (file, "1\n");
 				client.Add (file);
 				client.Commit ("1", null, false, false, null, null, null, DateTime.MinValue, "user");
@@ -225,9 +226,9 @@ namespace Mercurial.Tests
 			string path = GetTemporaryPath ();
 			string file = Path.Combine (path, "foo");
 			string diffText = string.Empty;
-			CommandClient.Initialize (path);
+			CommandClient.Initialize (path, MercurialPath);
 			
-			using (var client = new CommandClient (path, null, null)) {
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (file, "1\n");
 				client.Add (file);
 				client.Commit ("1");
@@ -249,8 +250,8 @@ namespace Mercurial.Tests
 			string file = Path.Combine (path, "foo");
 			IDictionary<string,Status > statuses = null;
 			
-			CommandClient.Initialize (path);
-			using (var client = new CommandClient (path, null, null)) {
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (file, string.Empty);
 				client.Add (file);
 				statuses = client.Status (null);
@@ -272,20 +273,20 @@ namespace Mercurial.Tests
 			string firstPath = GetTemporaryPath ();
 			string secondPath = GetTemporaryPath ();
 			string file = Path.Combine (firstPath, "foo");
-			CommandClient.Initialize (firstPath);
+			CommandClient.Initialize (firstPath, MercurialPath);
 			CommandClient firstClient = null,
 			              secondClient = null;
 			
 			try {
 				// Create repo with one commit
-				firstClient = new CommandClient (firstPath, null, null);
+				firstClient = new CommandClient (firstPath, null, null, MercurialPath);
 				File.WriteAllText (file, "1");
 				firstClient.Add (file);
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath);
-				secondClient = new CommandClient (secondPath, null, null);
+				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
 				// Add changeset to original repo
@@ -310,20 +311,20 @@ namespace Mercurial.Tests
 			string firstPath = GetTemporaryPath ();
 			string secondPath = GetTemporaryPath ();
 			string file = Path.Combine (firstPath, "foo");
-			CommandClient.Initialize (firstPath);
+			CommandClient.Initialize (firstPath, MercurialPath);
 			CommandClient firstClient = null,
 			              secondClient = null;
 			
 			try {
 				// Create repo with one commit
-				firstClient = new CommandClient (firstPath, null, null);
+				firstClient = new CommandClient (firstPath, null, null, MercurialPath);
 				File.WriteAllText (file, "1\n");
 				firstClient.Add (file);
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath);
-				secondClient = new CommandClient (secondPath, null, null);
+				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
 				// Add changeset to original repo
@@ -355,20 +356,20 @@ namespace Mercurial.Tests
 			string firstPath = GetTemporaryPath ();
 			string secondPath = GetTemporaryPath ();
 			string file = Path.Combine (firstPath, "foo");
-			CommandClient.Initialize (firstPath);
+			CommandClient.Initialize (firstPath, MercurialPath);
 			CommandClient firstClient = null,
 			              secondClient = null;
 			
 			try {
 				// Create repo with one commit
-				firstClient = new CommandClient (firstPath, null, null);
+				firstClient = new CommandClient (firstPath, null, null, MercurialPath);
 				File.WriteAllText (file, "1\n");
 				firstClient.Add (file);
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath);
-				secondClient = new CommandClient (secondPath, null, null);
+				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
 				// Add changeset to original repo
@@ -398,20 +399,20 @@ namespace Mercurial.Tests
 			string firstPath = GetTemporaryPath ();
 			string secondPath = GetTemporaryPath ();
 			string file = Path.Combine (firstPath, "foo");
-			CommandClient.Initialize (firstPath);
+			CommandClient.Initialize (firstPath, MercurialPath);
 			CommandClient firstClient = null,
 			              secondClient = null;
 			
 			try {
 				// Create repo with one commit
-				firstClient = new CommandClient (firstPath, null, null);
+				firstClient = new CommandClient (firstPath, null, null, MercurialPath);
 				File.WriteAllText (file, "1\n");
 				firstClient.Add (file);
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath);
-				secondClient = new CommandClient (secondPath, null, null);
+				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
 				// Add changeset to child repo
@@ -437,9 +438,9 @@ namespace Mercurial.Tests
 			string path = GetTemporaryPath ();
 			string file = Path.Combine (path, "foo");
 			string summary = string.Empty;
-			CommandClient.Initialize (path);
+			CommandClient.Initialize (path, MercurialPath);
 			
-			using (var client = new CommandClient (path, null, null)) {
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (file, "1");
 				client.Add (file);
 				client.Commit ("1", null, false, false, null, null, null, DateTime.MinValue, "user");
@@ -455,20 +456,20 @@ namespace Mercurial.Tests
 			string firstPath = GetTemporaryPath ();
 			string secondPath = GetTemporaryPath ();
 			string file = Path.Combine (firstPath, "foo");
-			CommandClient.Initialize (firstPath);
+			CommandClient.Initialize (firstPath, MercurialPath);
 			CommandClient firstClient = null,
 			              secondClient = null;
 			
 			try {
 				// Create repo with one commit
-				firstClient = new CommandClient (firstPath, null, null);
+				firstClient = new CommandClient (firstPath, null, null, MercurialPath);
 				File.WriteAllText (file, "1");
 				firstClient.Add (file);
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath);
-				secondClient = new CommandClient (secondPath, null, null);
+				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
 				// Add changesets to original repo
@@ -493,20 +494,20 @@ namespace Mercurial.Tests
 			string firstPath = GetTemporaryPath ();
 			string secondPath = GetTemporaryPath ();
 			string file = Path.Combine (firstPath, "foo");
-			CommandClient.Initialize (firstPath);
+			CommandClient.Initialize (firstPath, MercurialPath);
 			CommandClient firstClient = null,
 			              secondClient = null;
 			
 			try {
 				// Create repo with one commit
-				firstClient = new CommandClient (firstPath, null, null);
+				firstClient = new CommandClient (firstPath, null, null, MercurialPath);
 				File.WriteAllText (file, "1");
 				firstClient.Add (file);
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath);
-				secondClient = new CommandClient (secondPath, null, null);
+				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
 				// Add changeset to original repo
