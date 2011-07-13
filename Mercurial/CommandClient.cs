@@ -116,13 +116,14 @@ namespace Mercurial
 		/// </param>
 		public CommandClient (string path, string encoding, IDictionary<string,string> configs, string mercurialPath)
 		{
+			if (string.IsNullOrEmpty (path))
+				throw new ArgumentException ("Path cannot be empty", "path");
+			
 			var arguments = new StringBuilder ("serve --cmdserver pipe ");
+			arguments.AppendFormat ("-R {0} ", path);
 			
 			if (string.IsNullOrEmpty (mercurialPath)) {
 				mercurialPath = DefaultMercurialPath;
-			}
-			if (!string.IsNullOrEmpty (path)) {
-				arguments.AppendFormat ("-R {0} ", path);
 			}
 			
 			if (null != configs) {
@@ -134,7 +135,7 @@ namespace Mercurial
 				));
 			}
 			
-			ProcessStartInfo commandServerInfo = new ProcessStartInfo (mercurialPath, arguments.ToString ());
+			ProcessStartInfo commandServerInfo = new ProcessStartInfo (mercurialPath, arguments.ToString ().Trim ());
 			if (null != encoding) {
 				commandServerInfo.EnvironmentVariables [MercurialEncodingKey] = encoding;
 			}
@@ -144,7 +145,7 @@ namespace Mercurial
 			commandServerInfo.UseShellExecute = false;
 			
 			try {
-				// Console.WriteLine ("Launching command server with: {0} {1}", MercurialPath, arguments.ToString ());
+				// Console.WriteLine ("Launching command server with: {0} {1}", mercurialPath, arguments.ToString ());
 				commandServer = Process.Start (commandServerInfo);
 			} catch (Exception ex) {
 				throw new ServerException ("Error launching mercurial command server", ex);
@@ -164,14 +165,10 @@ namespace Mercurial
 		/// </param>
 		public static void Initialize (string destination, string mercurialPath)
 		{
-			using (var client = new CommandClient (null, null, null, mercurialPath)) {
-				client.InitializeInternal (destination);
-			}
-		}
-		
-		internal void InitializeInternal (string destination)
-		{
-			ThrowOnFail (GetCommandOutput (new[]{ "init", destination }, null), 0, "Error initializing repository");
+			Process hg = Process.Start (mercurialPath, string.Format ("init {0}", destination));
+			hg.WaitForExit (5000);
+			if (!hg.HasExited || 0 != hg.ExitCode)
+				throw new CommandException (string.Format ("Error creating repository at {0}", destination));
 		}
 		
 		/// <summary>
@@ -219,12 +216,10 @@ namespace Mercurial
 		/// </param>
 		public static void Clone (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData, string mercurialPath)
 		{
-			using (var client = new CommandClient (null, null, null, mercurialPath)) {
-				client.CloneInternal (source, destination, updateWorkingCopy, updateToRevision, cloneToRevision, onlyCloneBranch, forcePullProtocol, compressData);
-			}
+				CloneInternal (source, destination, updateWorkingCopy, updateToRevision, cloneToRevision, onlyCloneBranch, forcePullProtocol, compressData, mercurialPath);
 		}
 
-		internal void CloneInternal (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData)
+		static void CloneInternal (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData, string mercurialPath)
 		{
 			if (string.IsNullOrEmpty (source)) 
 				throw new ArgumentException ("Source must not be empty.", "source");
@@ -241,7 +236,11 @@ namespace Mercurial
 			arguments.Add (source);
 			AddArgumentIf (arguments, !string.IsNullOrEmpty (destination), destination);
 			
-			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error cloning to {0}", source));
+			Process hg = Process.Start (mercurialPath, string.Join (" ", arguments.ToArray ()));
+			hg.WaitForExit ();
+			
+			if (0 != hg.ExitCode)
+				throw new CommandException (string.Format ("Error cloning {0}", source));
 		}
 		
 		/// <summary>

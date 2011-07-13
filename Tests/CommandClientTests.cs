@@ -59,14 +59,17 @@ namespace Mercurial.Tests
 		[Test]
 		public void TestConnection ()
 		{
-			using (new CommandClient (null, null, null, MercurialPath)) {
-			}
+			string path = GetTemporaryPath ();
+			CommandClient.Initialize (path, MercurialPath);
 		}
 		
 		[Test]
 		public void TestConfiguration ()
 		{
-			using (CommandClient client = new CommandClient (null, null, null, MercurialPath)) {
+			string path = GetTemporaryPath ();
+			CommandClient.Initialize (path, MercurialPath);
+			
+			using (CommandClient client = new CommandClient (path, null, null, MercurialPath)) {
 				IDictionary<string,string > config = client.Configuration;
 				Assert.IsNotNull (config);
 				Assert.Greater (config.Count, 0, "Expecting nonempty configuration");
@@ -531,8 +534,10 @@ namespace Mercurial.Tests
 		[Test]
 		public void TestVersion ()
 		{
+			string path = GetTemporaryPath ();
+			CommandClient.Initialize (path, MercurialPath);
 			Regex versionRegex = new Regex (@"^\d\.\d\.\d.*$");
-			using (var client = new CommandClient (null, null, null, MercurialPath)) {
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				Match match = versionRegex.Match (client.Version);
 				Assert.IsNotNull (match, "Invalid version string");
 				Assert.That (match.Success, "Invalid version string");
