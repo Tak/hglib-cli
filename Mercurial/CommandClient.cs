@@ -27,6 +27,7 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Mercurial
 {
@@ -82,6 +83,24 @@ namespace Mercurial
 		}
 		string _root;
 		
+		public string Version {
+			get {
+				if (null != _version)
+					return _version;
+				
+				_version = GetCommandOutput (new[]{"version"}, null).Output;
+				Match match = versionRegex.Match (_version);
+				if (null == match || !match.Success)
+					throw new CommandException (string.Format ("Invalid version string: {0}", _version));
+				return _version = string.Format ("{0}.{1}.{2}{3}",
+				                                 match.Groups ["major"].Value,
+				                                 match.Groups ["minor"].Value,
+				                                 match.Groups ["trivial"].Success ? match.Groups ["trivial"].Value : "0",
+				                                 match.Groups ["additional"].Success ? match.Groups ["additional"].Value : string.Empty);
+			}
+		}
+		string _version;
+		static Regex versionRegex = new Regex (@"^[^\)]+\([^\d]+(?<major>\d)\.(?<minor>\d)((.(?<trivial>\d))|(?<additional>.*))\)", RegexOptions.Compiled);
 		
 		/// <summary>
 		/// Launch a new command server
@@ -1678,26 +1697,9 @@ namespace Mercurial
 		/// </summary>
 		public static Mercurial.Status ParseStatus (string input)
 		{
-			switch (input) {
-			case "M":
-				return Mercurial.Status.Modified;
-			case "A":
-				return Mercurial.Status.Added;
-			case "R":
-				return Mercurial.Status.Removed;
-			case "C":
-				return Mercurial.Status.Clean;
-			case "!":
-				return Mercurial.Status.Missing;
-			case "?":
-				return Mercurial.Status.Unknown;
-			case "I":
-				return Mercurial.Status.Ignored;
-			case " ":
-				return Mercurial.Status.Origin;
-			default:
-				return Mercurial.Status.Clean; // ?
-			}
+			if (Enum.GetValues (typeof(Mercurial.Status)).Cast<Mercurial.Status> ().Any (x => ((char)x) == input[0]))
+				return (Mercurial.Status)(input [0]);
+			return Mercurial.Status.Clean;
 		}
 		
 		/// <summary>

@@ -29,14 +29,15 @@ namespace Mercurial
 	public enum Status
 	{
 		Default,
-		Modified,
-		Added,
-		Removed,
-		Clean,
-		Missing,
-		Unknown,
-		Ignored,
-		Origin,
+		Modified = 'M',
+		Added = 'A',
+		Removed = 'R',
+		Clean = 'C',
+		Missing = '!',
+		Unknown = '?',
+		Ignored = 'I',
+		Origin = ' ',
+		Conflicted = 'U',
 		All,
 	}
 }

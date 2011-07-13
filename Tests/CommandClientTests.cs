@@ -24,6 +24,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
+
 using NUnit.Framework;
 
 using Mercurial;
@@ -523,6 +525,17 @@ namespace Mercurial.Tests
 					firstClient.Dispose ();
 				if (null != secondClient)
 					secondClient.Dispose ();
+			}
+		}
+		
+		[Test]
+		public void TestVersion ()
+		{
+			Regex versionRegex = new Regex (@"^\d\.\d\.\d.*$");
+			using (var client = new CommandClient (null, null, null, MercurialPath)) {
+				Match match = versionRegex.Match (client.Version);
+				Assert.IsNotNull (match, "Invalid version string");
+				Assert.That (match.Success, "Invalid version string");
 			}
 		}
 
