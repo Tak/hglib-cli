@@ -1255,6 +1255,63 @@ namespace Mercurial
 			return result.Output;
 		}
 		
+		/// <summary>
+		/// Restore files to an earlier state
+		/// </summary>
+		/// <param name='revision'>
+		/// Revert to this revision
+		/// </param>
+		/// <param name='files'>
+		/// Revert these files
+		/// </param>
+		public void Revert (string revision, params string[] files)
+		{
+			Revert (revision, files, DateTime.MinValue, true, null, null, false);
+		}
+
+		/// <summary>
+		/// Restore files to an earlier state
+		/// </summary>
+		/// <param name='revision'>
+		/// Revert to this revision
+		/// </param>
+		/// <param name='files'>
+		/// Revert these files
+		/// </param>
+		/// <param name='date'>
+		/// Revert to the tipmost revision matching this date
+		/// </param>
+		/// <param name='saveBackups'>
+		/// Save backup copies of reverted files
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <param name='dryRun'>
+		/// Attempt revert without actually reverting
+		/// </param>
+		public void Revert (string revision, IEnumerable<string> files, DateTime date, bool saveBackups, string includePattern, string excludePattern, bool dryRun)
+		{
+			var arguments = new List<string> (){ "revert" };
+			AddNonemptyStringArgument (arguments, revision, "--rev");
+			AddFormattedDateArgument (arguments, date, "--date");
+			AddArgumentIf (arguments, !saveBackups, "--no-backup");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			AddArgumentIf (arguments, dryRun, "--dry-run");
+			
+			if (null == files || 0 == files.Count ()) {
+				arguments.Add ("--all");
+			} else {
+				arguments.AddRange (files);
+			}
+			
+			ThrowOnFail (GetCommandOutput (arguments, null), 0, "Error reverting");
+		}
+		
 		#region Plumbing
 		
 		void Handshake ()
