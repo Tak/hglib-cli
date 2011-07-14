@@ -1438,6 +1438,56 @@ namespace Mercurial
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error removing {0}", string.Join (" , ", files.ToArray ())));
 		}
 		
+		/// <summary>
+		/// Set or check the merge status of files
+		/// </summary>
+		/// <param name='files'>
+		/// Operate on these files
+		/// </param>
+		/// <param name='all'>
+		/// Operate on all unresolved files
+		/// </param>
+		/// <param name='list'>
+		/// Get list of files needing merge
+		/// </param>
+		/// <param name='mark'>
+		/// Mark files as resolved
+		/// </param>
+		/// <param name='unmark'>
+		/// Mark files as unresolved
+		/// </param>
+		/// <param name='mergeTool'>
+		/// Use this merge tool
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		public IDictionary<string,bool> Resolve (IEnumerable<string> files, bool all, bool list, bool mark, bool unmark, string mergeTool, string includePattern, string excludePattern)
+		{
+			var arguments = new List<string> (){ "resolve" };
+			AddArgumentIf (arguments, all, "--all");
+			AddArgumentIf (arguments, list, "--list");
+			AddArgumentIf (arguments, mark, "--mark");
+			AddArgumentIf (arguments, unmark, "--unmark");
+			AddNonemptyStringArgument (arguments, mergeTool, "--tool");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			if (null != files)
+				arguments.AddRange (files);
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			return result.Output.Split (new[]{'\n'}, StringSplitOptions.RemoveEmptyEntries).Aggregate (new Dictionary<string,bool> (),
+				(dict,line) => {
+					dict [line.Substring (2).Trim ()] = (line [0] == 'R');
+					return dict;
+				}, 
+				dict => dict
+			);
+		}
+		
 		#region Plumbing
 		
 		void Handshake ()

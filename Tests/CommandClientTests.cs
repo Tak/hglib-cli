@@ -602,6 +602,56 @@ namespace Mercurial.Tests
 				Assert.AreEqual (Status.Removed, statuses ["foo"], string.Format ("Incorrect status for foo: {0}", statuses ["foo"]));
 			}
 		}
+		
+		[Test]
+		[Ignore("Merge client popup")]
+		public void TestResolve ()
+		{
+			string firstPath = GetTemporaryPath ();
+			string secondPath = GetTemporaryPath ();
+			string file = Path.Combine (firstPath, "foo");
+			CommandClient.Initialize (firstPath, MercurialPath);
+			CommandClient firstClient = null,
+			              secondClient = null;
+			
+			try {
+				// Create repo with one commit
+				firstClient = new CommandClient (firstPath, null, null, MercurialPath);
+				File.WriteAllText (file, "1\n");
+				firstClient.Add (file);
+				firstClient.Commit ("1");
+			
+				// Clone repo
+				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
+				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
+				
+				// Add changeset to original repo
+				File.WriteAllText (file, "2\n");
+				firstClient.Commit ("2");
+				
+				// Add non-conflicting changeset to child repo
+				File.WriteAllText (Path.Combine (secondPath, "foo"), "1\na\n");
+				secondClient.Commit ("a");
+				
+				// Pull from clone
+				Assert.IsTrue (secondClient.Pull (null), "Pull unexpectedly resulted in unresolved files");
+				Assert.AreEqual (3, secondClient.Log (null).Count, "Unexpected number of log entries");
+				
+				Assert.AreEqual (2, secondClient.Heads ().Count (), "Unexpected number of heads");
+				
+				Assert.IsTrue (secondClient.Merge (null), "Merge unexpectedly resulted in unresolved files");
+				
+				IDictionary<string,bool > statuses = secondClient.Resolve (null, true, true, false, false, null, null, null);
+				Assert.That (statuses.ContainsKey ("foo"), "No merge status for foo");
+				Assert.AreEqual (true, statuses ["foo"], "Incorrect merge status for foo");
+			} finally {
+				if (null != firstClient)
+					firstClient.Dispose ();
+				if (null != secondClient)
+					secondClient.Dispose ();
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{
