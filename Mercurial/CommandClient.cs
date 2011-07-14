@@ -122,7 +122,7 @@ namespace Mercurial
 				throw new ArgumentException (string.Format ("{0} is not a valid mercurial repository", path), "path");
 			
 			var arguments = new StringBuilder ("serve --cmdserver pipe ");
-			arguments.AppendFormat ("-R {0} ", path);
+			arguments.AppendFormat ("--cwd {0} --repository {0} ", path);
 			
 			if (string.IsNullOrEmpty (mercurialPath)) {
 				mercurialPath = DefaultMercurialPath;
@@ -762,7 +762,7 @@ namespace Mercurial
 		/// </returns>
 		public string Annotate (string revision, params string[] files)
 		{
-			return Annotate (revision, files, true, false, true, false, false, true, false, false, null, null);
+			return Annotate (revision, files, true, false, true, false, false, true, false, false, false, null, null);
 		}
 		
 		/// <summary>
@@ -807,7 +807,7 @@ namespace Mercurial
 		/// <returns>
 		/// Raw annotation data
 		/// </returns>
-		public string Annotate (string revision, IEnumerable<string> files, bool followCopies, bool annotateBinaries, bool showAuthor, bool showFilename, bool showDate, bool showRevision, bool showChangeset, bool showLine, string includePattern, string excludePattern)
+		public string Annotate (string revision, IEnumerable<string> files, bool followCopies, bool annotateBinaries, bool showAuthor, bool showFilename, bool showDate, bool showRevision, bool showChangeset, bool showLine, bool shortDate, string includePattern, string excludePattern)
 		{
 			List<string > arguments = new List<string> (){ "annotate" };
 			
@@ -817,6 +817,7 @@ namespace Mercurial
 			AddArgumentIf (arguments, showAuthor, "--user");
 			AddArgumentIf (arguments, showFilename, "--file");
 			AddArgumentIf (arguments, showDate, "--date");
+			AddArgumentIf (arguments, shortDate, "--quiet");
 			AddArgumentIf (arguments, showRevision, "--number");
 			AddArgumentIf (arguments, showChangeset, "--changeset");
 			AddArgumentIf (arguments, showLine, "--line-number");
@@ -1477,34 +1478,36 @@ namespace Mercurial
 			
 			byte[] lengthBuffer = BitConverter.GetBytes (IPAddress.HostToNetworkOrder (argumentBuffer.Length));
 			
-			commandServer.StandardInput.BaseStream.Write (commandBuffer, 0, commandBuffer.Length);
-			commandServer.StandardInput.BaseStream.Write (lengthBuffer, 0, lengthBuffer.Length);
-			commandServer.StandardInput.BaseStream.Write (argumentBuffer, 0, argumentBuffer.Length);
-			commandServer.StandardInput.BaseStream.Flush ();
+			lock (commandServer) {
+				commandServer.StandardInput.BaseStream.Write (commandBuffer, 0, commandBuffer.Length);
+				commandServer.StandardInput.BaseStream.Write (lengthBuffer, 0, lengthBuffer.Length);
+				commandServer.StandardInput.BaseStream.Write (argumentBuffer, 0, argumentBuffer.Length);
+				commandServer.StandardInput.BaseStream.Flush ();
 			
-			while (true) {
-				CommandMessage message = ReadMessage ();
-				if (CommandChannel.Result == message.Channel)
-					return ReadInt (message.Buffer, 0);
+				while (true) {
+					CommandMessage message = ReadMessage ();
+					if (CommandChannel.Result == message.Channel)
+						return ReadInt (message.Buffer, 0);
 					
-				if (inputs != null && inputs.ContainsKey (message.Channel)) {
-					byte[] sendBuffer = inputs [message.Channel] (ReadUint (message.Buffer, 0));
-					if (null == sendBuffer || 0 == sendBuffer.LongLength) {
-					} else {
+					if (inputs != null && inputs.ContainsKey (message.Channel)) {
+						byte[] sendBuffer = inputs [message.Channel] (ReadUint (message.Buffer, 0));
+						if (null == sendBuffer || 0 == sendBuffer.LongLength) {
+						} else {
+						}
 					}
-				}
-				if (outputs != null && outputs.ContainsKey (message.Channel)) {
-					if (message.Buffer.Length > int.MaxValue) {
+					if (outputs != null && outputs.ContainsKey (message.Channel)) {
+						if (message.Buffer.Length > int.MaxValue) {
 						// .NET hates uints
-						int firstPart = message.Buffer.Length / 2;
-						int secondPart = message.Buffer.Length - firstPart;
-						outputs [message.Channel].Write (message.Buffer, 0, firstPart);
-						outputs [message.Channel].Write (message.Buffer, firstPart, secondPart);
-					} else {
-						outputs [message.Channel].Write (message.Buffer, 0, message.Buffer.Length);
+							int firstPart = message.Buffer.Length / 2;
+							int secondPart = message.Buffer.Length - firstPart;
+							outputs [message.Channel].Write (message.Buffer, 0, firstPart);
+							outputs [message.Channel].Write (message.Buffer, firstPart, secondPart);
+						} else {
+							outputs [message.Channel].Write (message.Buffer, 0, message.Buffer.Length);
+						}
 					}
 				}
-			}
+			}// lock commandServer
 		}
 		
 		/// <summary>
