@@ -562,6 +562,25 @@ namespace Mercurial.Tests
 				Assert.That (!client.Status ().ContainsKey ("foo"), "Revert failed for foo");
 			}
 		}
+		
+		[Test]
+		public void TestCat ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
+				File.WriteAllText (file, "foo\n");
+				client.Add (Path.Combine (path, "foo"));
+				client.Commit ("Commit all");
+				Assert.That (!client.Status ().ContainsKey ("foo"), "Default commit failed for foo");
+				
+				var contents = client.Cat (null, file);
+				Assert.AreEqual (1, contents.Count, "Unexpected size of file set");
+				Assert.That (contents.ContainsKey (file), "foo not in file set");
+				Assert.AreEqual ("foo\n", contents [file]);
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{

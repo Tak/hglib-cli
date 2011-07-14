@@ -118,6 +118,8 @@ namespace Mercurial
 		{
 			if (string.IsNullOrEmpty (path))
 				throw new ArgumentException ("Path cannot be empty", "path");
+			if (!Directory.Exists (path) || !Directory.Exists (Path.Combine (path, ".hg")))
+				throw new ArgumentException (string.Format ("{0} is not a valid mercurial repository", path), "path");
 			
 			var arguments = new StringBuilder ("serve --cmdserver pipe ");
 			arguments.AppendFormat ("-R {0} ", path);
@@ -165,6 +167,8 @@ namespace Mercurial
 		/// </param>
 		public static void Initialize (string destination, string mercurialPath)
 		{
+			if (string.IsNullOrEmpty (mercurialPath))
+				mercurialPath = DefaultMercurialPath;
 			Process hg = Process.Start (mercurialPath, string.Format ("init {0}", destination));
 			hg.WaitForExit (5000);
 			if (!hg.HasExited || 0 != hg.ExitCode)
@@ -216,13 +220,15 @@ namespace Mercurial
 		/// </param>
 		public static void Clone (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData, string mercurialPath)
 		{
-				CloneInternal (source, destination, updateWorkingCopy, updateToRevision, cloneToRevision, onlyCloneBranch, forcePullProtocol, compressData, mercurialPath);
+			CloneInternal (source, destination, updateWorkingCopy, updateToRevision, cloneToRevision, onlyCloneBranch, forcePullProtocol, compressData, mercurialPath);
 		}
 
 		static void CloneInternal (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData, string mercurialPath)
 		{
 			if (string.IsNullOrEmpty (source)) 
 				throw new ArgumentException ("Source must not be empty.", "source");
+			if (string.IsNullOrEmpty (mercurialPath))
+				mercurialPath = DefaultMercurialPath;
 			
 			var arguments = new List<string> (){ "clone" };
 			AddArgumentIf (arguments, !updateWorkingCopy, "--noupdate");
@@ -1309,6 +1315,64 @@ namespace Mercurial
 			}
 			
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, "Error reverting");
+		}
+		
+		/// <summary>
+		/// Get the text of a set of files
+		/// </summary>
+		/// <param name='revision'>
+		/// Get text at the given revision
+		/// </param>
+		/// <param name='files'>
+		/// Get text for these files
+		/// </param>
+		public IDictionary<string,string> Cat (string revision, params string[] files)
+		{
+			return Cat (revision, files, null, false, null, null);
+		}
+		
+		/// <summary>
+		/// Get the text of a set of files
+		/// </summary>
+		/// <param name='revision'>
+		/// Get text at the given revision
+		/// </param>
+		/// <param name='files'>
+		/// Get text for these files
+		/// </param>
+		/// <param name='format'>
+		/// Apply this format
+		/// </param>
+		/// <param name='decode'>
+		/// Apply any matching decode filter
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		public IDictionary<string,string> Cat (string revision, IEnumerable<string> files, string format, bool decode, string includePattern, string excludePattern)
+		{
+			if (null == files || 0 == files.Count ())
+				throw new ArgumentException ("File list cannot be empty", "files");
+				
+			var arguments = new List<string> () { "cat" };
+			AddNonemptyStringArgument (arguments, revision, "--rev");
+			AddNonemptyStringArgument (arguments, format, "--output");
+			AddArgumentIf (arguments, decode, "--decode");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			
+			return files.Aggregate (new Dictionary<string,string> (),
+				(dict,file) => {
+					var realArguments = new List<string> (arguments);
+					realArguments.Add (file);
+					dict[file] = GetCommandOutput (realArguments, null).Output;
+					return dict;
+				},
+				dict => dict
+			);
 		}
 		
 		#region Plumbing
