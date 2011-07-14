@@ -1376,6 +1376,68 @@ namespace Mercurial
 			);
 		}
 		
+		/// <summary>
+		/// Schedule files for removal from the repository
+		/// </summary>
+		/// <param name='files'>
+		/// Schedule these files for removal
+		/// </param>
+		/// <param name='after'>
+		/// Record the deletion of missing files
+		/// </param>
+		/// <param name='force'>
+		/// Force removal of added and modified files
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <exception cref='ArgumentException'>
+		/// Is thrown when the file list is empty
+		/// </exception>
+		public void Remove (params string[] files)
+		{
+			Remove (files, false, false, null, null);
+		}
+		
+		/// <summary>
+		/// Schedule files for removal from the repository
+		/// </summary>
+		/// <param name='files'>
+		/// Schedule these files for removal
+		/// </param>
+		/// <param name='after'>
+		/// Record the deletion of missing files
+		/// </param>
+		/// <param name='force'>
+		/// Force removal of added and modified files
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <exception cref='ArgumentException'>
+		/// Is thrown when the file list is empty
+		/// </exception>
+		public void Remove (IEnumerable<string> files, bool after, bool force, string includePattern, string excludePattern)
+		{
+			if (null == files || 0 == files.Count ())
+				throw new ArgumentException ("File list cannot be empty", "files");
+				
+			var arguments = new List<string> (){ "remove" };
+			AddArgumentIf (arguments, after, "--after");
+			AddArgumentIf (arguments, force, "--force");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			arguments.AddRange (files);
+			
+			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error removing {0}", string.Join (" , ", files.ToArray ())));
+		}
+		
 		#region Plumbing
 		
 		void Handshake ()

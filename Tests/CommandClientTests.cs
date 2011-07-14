@@ -581,6 +581,27 @@ namespace Mercurial.Tests
 				Assert.AreEqual ("foo\n", contents [file]);
 			}
 		}
+		
+		[Test]
+		public void TestRemove ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
+				File.WriteAllText (file, string.Empty);
+				client.Add (file);
+				client.Commit ("Commit all");
+				Assert.That (!client.Status ().ContainsKey (file), "Default commit failed for foo");
+				
+				client.Remove (file);
+				Assert.That (!File.Exists (file));
+				
+				IDictionary<string,Status > statuses = client.Status ();
+				Assert.That (statuses.ContainsKey ("foo"), "No status for foo");
+				Assert.AreEqual (Status.Removed, statuses ["foo"], string.Format ("Incorrect status for foo: {0}", statuses ["foo"]));
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{
