@@ -652,6 +652,23 @@ namespace Mercurial.Tests
 					secondClient.Dispose ();
 			}
 		}
+		
+		[Test]
+		public void TestParents ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
+				File.WriteAllText (file, string.Empty);
+				client.Add (file);
+				client.Commit ("Commit all");
+				Assert.That (!client.Status ().ContainsKey (file), "Default commit failed for foo");
+				
+				IEnumerable<Revision > parents = client.Parents (file, null);
+				Assert.AreEqual (1, parents.Count (), "Unexpected number of parents");
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{

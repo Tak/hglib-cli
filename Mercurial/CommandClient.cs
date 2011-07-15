@@ -1488,6 +1488,25 @@ namespace Mercurial
 			);
 		}
 		
+		/// <summary>
+		/// Get the parents of a revision
+		/// </summary>
+		/// <param name='file'>
+		/// Get parents for the revision this file was last changed
+		/// </param>
+		/// <param name='revision'>
+		/// Get parents for this revision
+		/// </param>
+		public IEnumerable<Revision> Parents (string file, string revision)
+		{
+			var arguments = new List<string> (){ "parents", "--style", "xml" };
+			AddNonemptyStringArgument (arguments, revision, "--rev");
+			AddArgumentIf (arguments, !string.IsNullOrEmpty (file), file);
+			
+			CommandResult result = ThrowOnFail (GetCommandOutput (arguments, null), 0, "Error getting parents");
+			return ParseRevisionsFromLog (result.Output);
+		}
+		
 		#region Plumbing
 		
 		void Handshake ()
