@@ -1391,6 +1391,19 @@ namespace Mercurial
 			return ParseRevisionsFromLog (result.Output);
 		}
 		
+		public IDictionary<string,string> Paths (string name=null)
+		{
+			var arguments = new List<string> (){ "paths" };
+			AddArgumentIf (arguments, !string.IsNullOrEmpty (name), name);
+			
+			CommandResult result = ThrowOnFail (GetCommandOutput (arguments, null), 0, "Error getting paths");
+			return result.Output.Split (new[]{"\n"}, StringSplitOptions.RemoveEmptyEntries).Aggregate (new Dictionary<string,string>(), (dict,line) => {
+				var tokens = line.Split (new[]{'='}, 2);
+				dict[tokens[0].Trim ()] = tokens[1].Trim ();
+				return dict;
+			});
+		}
+		
 		#region Plumbing
 		
 		void Handshake ()
