@@ -184,20 +184,6 @@ namespace Mercurial
 		/// <param name='destination'>
 		/// The path to the local destination for the clone
 		/// </param>
-		public static void Clone (string source, string destination, string mercurialPath)
-		{
-			Clone (source, destination, true, null, null, null, false, true, mercurialPath);
-		}
-		
-		/// <summary>
-		/// Create a copy of an existing repository
-		/// </summary>
-		/// <param name='source'>
-		/// The path to the repository to copy
-		/// </param>
-		/// <param name='destination'>
-		/// The path to the local destination for the clone
-		/// </param>
 		/// <param name='updateWorkingCopy'>
 		/// Create a local working copy
 		/// </param>
@@ -218,7 +204,7 @@ namespace Mercurial
 		/// <param name='compressData'>
 		/// Compress changesets for transfer
 		/// </param>
-		public static void Clone (string source, string destination, bool updateWorkingCopy, string updateToRevision, string cloneToRevision, string onlyCloneBranch, bool forcePullProtocol, bool compressData, string mercurialPath)
+		public static void Clone (string source, string destination, bool updateWorkingCopy=true, string updateToRevision=null, string cloneToRevision=null, string onlyCloneBranch=null, bool forcePullProtocol=false, bool compressData=true, string mercurialPath=null)
 		{
 			CloneInternal (source, destination, updateWorkingCopy, updateToRevision, cloneToRevision, onlyCloneBranch, forcePullProtocol, compressData, mercurialPath);
 		}
@@ -255,9 +241,9 @@ namespace Mercurial
 		/// <param name='files'>
 		/// The files to be added
 		/// </param>
-		public void Add (params string[] files)
+		public void Add (params string[] fileparams)
 		{
-			Add (files, null, null, false, false);
+			Add (files: fileparams);
 		}
 		
 		/// <summary>
@@ -279,7 +265,7 @@ namespace Mercurial
 		/// Check whether files can be successfully added, 
 		/// without actually adding them
 		/// </param>
-		public void Add (IEnumerable<string> files, string includePattern, string excludePattern, bool recurseSubRepositories, bool dryRun)
+		public void Add (IEnumerable<string> files, string includePattern=null, string excludePattern=null, bool recurseSubRepositories=false, bool dryRun=false)
 		{
 			if (null == files) files = new List<string> ();
 			var arguments = new List<string> (){ "add" };
@@ -302,9 +288,9 @@ namespace Mercurial
 		/// <returns>
 		/// A dictionary mapping each file to its Status
 		/// </returns>
-		public IDictionary<string,Status> Status (params string[] files)
+		public IDictionary<string,Status> Status (params string[] fileparams)
 		{
-			return Status (files, Mercurial.Status.Default, false, null, null, null, null, false);
+			return Status (files: fileparams);
 		}
 		
 		/// <summary>
@@ -337,7 +323,7 @@ namespace Mercurial
 		/// <returns>
 		/// A dictionary mapping each file to its Status
 		/// </returns>
-		public IDictionary<string,Status> Status (IEnumerable<string> files, Status onlyFilesWithThisStatus, bool showCopiedSources, string fromRevision, string onlyRevision, string includePattern, string excludePattern, bool recurseSubRepositories)
+		public IDictionary<string,Status> Status (IEnumerable<string> files, Status onlyFilesWithThisStatus=Mercurial.Status.Default, bool showCopiedSources=false, string fromRevision=null, string onlyRevision=null, string includePattern=null, string excludePattern=null, bool recurseSubRepositories=false)
 		{
 			var arguments = new List<string> (){ "status" };
 			
@@ -362,9 +348,7 @@ namespace Mercurial
 					dict [line.Substring (2)] = ParseStatus (line.Substring (0, 1));
 				}
 				return dict;
-			},
-				dict => dict
-			);
+			});
 		}
 		
 		/// <summary>
@@ -376,9 +360,9 @@ namespace Mercurial
 		/// <param name='files'>
 		/// Files to commit, empty set will commit all changes reported by Status
 		/// </param>
-		public void Commit (string message, params string[] files)
+		public void Commit (string message, params string[] fileparams)
 		{
-			Commit (message, files, false, false, null, null, null, DateTime.MinValue, null);
+			Commit (message: message, files: fileparams);
 		}
 		
 		/// <summary>
@@ -411,7 +395,7 @@ namespace Mercurial
 		/// <param name='user'>
 		/// Record this user as the committer
 		/// </param>
-		public void Commit (string message, IEnumerable<string> files, bool addAndRemoveUnknowns, bool closeBranch, string includePattern, string excludePattern, string messageLog, DateTime date, string user)
+		public void Commit (string message, IEnumerable<string> files, bool addAndRemoveUnknowns=false, bool closeBranch=false, string includePattern=null, string excludePattern=null, string messageLog=null, DateTime date=default(DateTime), string user=null)
 		{
 			var arguments = new List<string> (){ "commit" };
 			AddNonemptyStringArgument (arguments, message, "--message");
@@ -441,9 +425,9 @@ namespace Mercurial
 		/// <returns>
 		/// An ordered list of Revisions
 		/// </returns>
-		public IList<Revision> Log (string revisionRange, params string[] files)
+		public IList<Revision> Log (string revisionRange, params string[] fileparams)
 		{
-			return Log (revisionRange, files, false, false, DateTime.MinValue, DateTime.MinValue, false, null, false, false, false, null, null, null, 0, null, null);
+			return Log (revisionRange: revisionRange, files: fileparams);
 		}
 		
 		/// <summary>
@@ -503,7 +487,7 @@ namespace Mercurial
 		/// <returns>
 		/// An ordered list of Revisions
 		/// </returns>
-		public IList<Revision> Log (string revisionRange, IEnumerable<string> files, bool followAcrossCopy, bool followFirstMergeParent, DateTime fromDate, DateTime toDate, bool showCopiedFiles, string searchText, bool showRemoves, bool onlyMerges, bool excludeMerges, string user, string branch, string pruneRevisions, int limit, string includePattern, string excludePattern)
+		public IList<Revision> Log (string revisionRange, IEnumerable<string> files, bool followAcrossCopy=false, bool followFirstMergeParent=false, DateTime fromDate=default(DateTime), DateTime toDate=default(DateTime), bool showCopiedFiles=false, string searchText=null, bool showRemoves=false, bool onlyMerges=false, bool excludeMerges=false, string user=null, string branch=null, string pruneRevisions=null, int limit=0, string includePattern=null, string excludePattern=null)
 		{
 			var arguments = new List<string> (){ "log", "--style", "xml" };
 			AddNonemptyStringArgument (arguments, revisionRange, "--rev");
@@ -523,7 +507,7 @@ namespace Mercurial
 				arguments.Add ("--limit");
 				arguments.Add (limit.ToString ());
 			}
-			if (DateTime.MinValue != fromDate && DateTime.MinValue != toDate) {
+			if (default(DateTime) != fromDate && default(DateTime) != toDate) {
 				arguments.Add (string.Format ("{0} to {1}",
 				                              fromDate.ToString ("yyyy-MM-dd HH:mm:ss"),
 				                              toDate.ToString ("yyyy-MM-dd HH:mm:ss")));
@@ -543,23 +527,6 @@ namespace Mercurial
 			}
 		}
 		
-		/// <summary>
-		/// Show new changesets in another repository
-		/// </summary>
-		/// <param name="source">
-		/// Check this repository for incoming changesets
-		/// </param>
-		/// <param name="toRevision">
-		/// Check up to this revision
-		/// </param>
-		/// <returns>
-		/// An ordered list of revisions
-		/// </returns>
-		public IList<Revision> Incoming (string source, string toRevision)
-		{
-			return Incoming (source, toRevision, false, false, null, null, 0, true, false);
-		}
-
 		/// <summary>
 		/// Show new changesets in another repository
 		/// </summary>
@@ -593,7 +560,7 @@ namespace Mercurial
 		/// <returns>
 		/// An ordered list of revisions
 		/// </returns>
-		public IList<Revision> Incoming (string source, string toRevision, bool force, bool showNewestFirst, string bundleFile, string branch, int limit, bool showMerges, bool recurseSubRepos)
+		public IList<Revision> Incoming (string source, string toRevision, bool force=false, bool showNewestFirst=false, string bundleFile=null, string branch=null, int limit=0, bool showMerges=true, bool recurseSubRepos=false)
 		{
 			var arguments = new List<string> (){ "incoming", "--style", "xml" };
 			AddNonemptyStringArgument (arguments, toRevision, "--rev");
@@ -630,23 +597,6 @@ namespace Mercurial
 		/// <param name="toRevision">
 		/// Check up to this revision
 		/// </param>
-		/// <returns>
-		/// An ordered list of revisions
-		/// </returns>
-		public IList<Revision> Outgoing (string source, string toRevision)
-		{
-			return Outgoing (source, toRevision, false, false, null, 0, true, false);
-		}
-		
-		/// <summary>
-		/// Show new changesets in this repository
-		/// </summary>
-		/// <param name="source">
-		/// Check this repository for outgoing changesets
-		/// </param>
-		/// <param name="toRevision">
-		/// Check up to this revision
-		/// </param>
 		/// <param name="force">
 		/// Check even if the remote repository is unrelated
 		/// </param>
@@ -668,7 +618,7 @@ namespace Mercurial
 		/// <returns>
 		/// An ordered list of revisions
 		/// </returns>
-		public IList<Revision> Outgoing (string source, string toRevision, bool force, bool showNewestFirst, string branch, int limit, bool showMerges, bool recurseSubRepos)
+		public IList<Revision> Outgoing (string source, string toRevision, bool force=false, bool showNewestFirst=false, string branch=null, int limit=0, bool showMerges=true, bool recurseSubRepos=false)
 		{
 			var arguments = new List<string> (){ "outgoing", "--style", "xml" };
 			AddNonemptyStringArgument (arguments, toRevision, "--rev");
@@ -704,9 +654,9 @@ namespace Mercurial
 		/// <returns>
 		/// A set of Revisions representing the heads
 		/// </returns>
-		public IEnumerable<Revision> Heads (params string[] revisions)
+		public IEnumerable<Revision> Heads (params string[] revisionParams)
 		{
-			return Heads (revisions, null, false, false);
+			return Heads (revisions: revisionParams);
 		}
 		
 		/// <summary>
@@ -727,7 +677,7 @@ namespace Mercurial
 		/// <returns>
 		/// A set of Revisions representing the heads
 		/// </returns>
-		public IEnumerable<Revision> Heads (IEnumerable<string> revisions, string startRevision, bool onlyTopologicalHeads, bool showClosed)
+		public IEnumerable<Revision> Heads (IEnumerable<string> revisions, string startRevision=null, bool onlyTopologicalHeads=false, bool showClosed=false)
 		{
 			var arguments = new List<string> (){ "heads", "--style", "xml" };
 			AddNonemptyStringArgument (arguments, startRevision, "--rev");
@@ -760,9 +710,9 @@ namespace Mercurial
 		/// <returns>
 		/// Raw annotation data
 		/// </returns>
-		public string Annotate (string revision, params string[] files)
+		public string Annotate (string revision, params string[] fileParams)
 		{
-			return Annotate (revision, files, true, false, true, false, false, true, false, false, false, null, null);
+			return Annotate (revision: revision, files: fileParams);
 		}
 		
 		/// <summary>
@@ -807,7 +757,7 @@ namespace Mercurial
 		/// <returns>
 		/// Raw annotation data
 		/// </returns>
-		public string Annotate (string revision, IEnumerable<string> files, bool followCopies, bool annotateBinaries, bool showAuthor, bool showFilename, bool showDate, bool showRevision, bool showChangeset, bool showLine, bool shortDate, string includePattern, string excludePattern)
+		public string Annotate (string revision, IEnumerable<string> files, bool followCopies=true, bool annotateBinaries=false, bool showAuthor=true, bool showFilename=false, bool showDate=false, bool showRevision=true, bool showChangeset=false, bool showLine=false, bool shortDate=false, string includePattern=null, string excludePattern=null)
 		{
 			List<string > arguments = new List<string> (){ "annotate" };
 			
@@ -845,9 +795,9 @@ namespace Mercurial
 		/// <returns>
 		/// A unified diff
 		/// </returns>
-		public string Diff (string revision, params string[] files)
+		public string Diff (string revision, params string[] fileParams)
 		{
-			return Diff (revision, files, null, false, false, true, false, false, false, false, false, 0, null, null, false);
+			return Diff (revision: revision, files: fileParams);
 		}
 		
 		/// <summary>
@@ -901,7 +851,7 @@ namespace Mercurial
 		/// <returns>
 		/// A unified diff
 		/// </returns>
-		public string Diff (string revision, IEnumerable<string> files, string changeset, bool diffBinaries, bool useGitFormat, bool showDates, bool showFunctionNames, bool reverse, bool ignoreWhitespace, bool ignoreWhitespaceOnlyChanges, bool ignoreBlankLines, int contextLines, string includePattern, string excludePattern, bool recurseSubRepositories)
+		public string Diff (string revision, IEnumerable<string> files, string changeset=null, bool diffBinaries=false, bool useGitFormat=false, bool showDates=true, bool showFunctionNames=false, bool reverse=false, bool ignoreWhitespace=false, bool ignoreWhitespaceOnlyChanges=false, bool ignoreBlankLines=false, int contextLines=0, string includePattern=null, string excludePattern=null, bool recurseSubRepositories=false)
 		{
 			var arguments = new List<string> (){ "diff" };
 			AddNonemptyStringArgument (arguments, revision, "--rev");
@@ -942,9 +892,9 @@ namespace Mercurial
 		/// <returns>
 		/// The output of the export
 		/// </returns>
-		public string Export (params string[] revisions)
+		public string Export (params string[] revisionParams)
 		{
-			return Export (revisions, null, false, false, false, true);
+			return Export (revisions: revisionParams);
 		}
 		
 		/// <summary>
@@ -974,7 +924,7 @@ namespace Mercurial
 		/// <returns>
 		/// The output of the export
 		/// </returns>
-		public string Export (IEnumerable<string> revisions, string outputFile, bool switchParent, bool diffBinaries, bool useGitFormat, bool showDates)
+		public string Export (IEnumerable<string> revisions, string outputFile=null, bool switchParent=false, bool diffBinaries=false, bool useGitFormat=false, bool showDates=true)
 		{
 			if (null == revisions || 0 == revisions.Count ())
 				throw new ArgumentException ("Revision list cannot be empty", "revisions");
@@ -1002,9 +952,9 @@ namespace Mercurial
 		/// <exception cref='ArgumentException'>
 		/// Is thrown when an empty file list is passed
 		/// </exception>
-		public void Forget (params string[] files)
+		public void Forget (params string[] fileParams)
 		{
-			Forget (files, null, null);
+			Forget (files: fileParams);
 		}
 		
 		/// <summary>
@@ -1022,7 +972,7 @@ namespace Mercurial
 		/// <exception cref='ArgumentException'>
 		/// Is thrown when an empty file list is passed
 		/// </exception>
-		public void Forget (IEnumerable<string> files, string includePattern, string excludePattern)
+		public void Forget (IEnumerable<string> files, string includePattern=null, string excludePattern=null)
 		{
 			if (null == files || 0 == files.Count ())
 				throw new ArgumentException ("File list cannot be empty", "files");
@@ -1033,21 +983,6 @@ namespace Mercurial
 			arguments.AddRange (files);
 			
 			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error forgetting {0}", string.Join (",", files.ToArray ())));
-		}
-		
-		/// <summary>
-		/// Merge the working copy with another revision
-		/// </summary>
-		/// <param name='revision'>
-		/// Merge with this revision
-		/// </param>
-		/// <returns>
-		/// true if the merge succeeded with no unresolved files, 
-		/// false if there are unresolved files
-		/// </returns>
-		public bool Merge (string revision)
-		{
-			return Merge (revision, false, null, false);
 		}
 		
 		/// <summary>
@@ -1069,7 +1004,7 @@ namespace Mercurial
 		/// true if the merge succeeded with no unresolved files, 
 		/// false if there are unresolved files
 		/// </returns>
-		public bool Merge (string revision, bool force, string mergeTool, bool dryRun)
+		public bool Merge (string revision, bool force=false, string mergeTool=null, bool dryRun=false)
 		{
 			var arguments = new List<string> (){ "merge" };
 			AddArgumentIf (arguments, force, "--force");
@@ -1083,21 +1018,6 @@ namespace Mercurial
 			}
 			
 			return (0 == result.Result);
-		}
-		
-		/// <summary>
-		/// Pull changes from another repository
-		/// </summary>
-		/// <param name='source'>
-		/// Pull changes from this repository
-		/// </param>
-		/// <returns>
-		/// true if the pull succeeded with no unresolved files, 
-		/// false if there are unresolved files
-		/// </returns>
-		public bool Pull (string source)
-		{
-			return Pull (source, null, false, false, null);
 		}
 		
 		/// <summary>
@@ -1122,7 +1042,7 @@ namespace Mercurial
 		/// true if the pull succeeded with no unresolved files, 
 		/// false if there are unresolved files
 		/// </returns>
-		public bool Pull (string source, string toRevision, bool update, bool force, string branch)
+		public bool Pull (string source, string toRevision=null, bool update=false, bool force=false, string branch=null)
 		{
 			var arguments = new List<string> (){ "pull" };
 			AddNonemptyStringArgument (arguments, toRevision, "--rev");
@@ -1148,23 +1068,6 @@ namespace Mercurial
 		/// <param name='toRevision'>
 		/// Push up to this revision
 		/// </param>
-		/// <returns>
-		/// Whether any changesets were pushed
-		/// </returns>
-		public bool Push (string destination, string toRevision)
-		{
-			return Push (destination, toRevision, false, null, false);
-		}
-		
-		/// <summary>
-		/// Push changesets to another repository
-		/// </summary>
-		/// <param name='destination'>
-		/// Push changes to this repository
-		/// </param>
-		/// <param name='toRevision'>
-		/// Push up to this revision
-		/// </param>
 		/// <param name='force'>
 		/// Force push
 		/// </param>
@@ -1177,7 +1080,7 @@ namespace Mercurial
 		/// <returns>
 		/// Whether any changesets were pushed
 		/// </returns>
-		public bool Push (string destination, string toRevision, bool force, string branch, bool allowNewBranch)
+		public bool Push (string destination, string toRevision=null, bool force=false, string branch=null, bool allowNewBranch=false)
 		{
 			var arguments = new List<string> (){ "push" };
 			AddNonemptyStringArgument (arguments, toRevision, "--rev");
@@ -1199,21 +1102,6 @@ namespace Mercurial
 		/// <param name='revision'>
 		/// Update to this revision, or tip if empty
 		/// </param>
-		/// <returns>
-		/// true if the update succeeded with no unresolved files, 
-		/// false if there are unresolved files
-		/// </returns>
-		public bool Update (string revision)
-		{
-			return Update (revision, false, false, DateTime.MinValue);
-		}
-		
-		/// <summary>
-		/// Update the working copy
-		/// </summary>
-		/// <param name='revision'>
-		/// Update to this revision, or tip if empty
-		/// </param>
 		/// <param name='discardUncommittedChanges'>
 		/// Discard uncommitted changes
 		/// </param>
@@ -1227,7 +1115,7 @@ namespace Mercurial
 		/// true if the update succeeded with no unresolved files, 
 		/// false if there are unresolved files
 		/// </returns>
-		public bool Update (string revision, bool discardUncommittedChanges, bool updateAcrossBranches, DateTime toDate)
+		public bool Update (string revision, bool discardUncommittedChanges=false, bool updateAcrossBranches=false, DateTime toDate=default(DateTime))
 		{
 			var arguments = new List<string> (){ "update" };
 			AddArgumentIf (arguments, discardUncommittedChanges, "--clean");
@@ -1270,9 +1158,9 @@ namespace Mercurial
 		/// <param name='files'>
 		/// Revert these files
 		/// </param>
-		public void Revert (string revision, params string[] files)
+		public void Revert (string revision, params string[] fileParams)
 		{
-			Revert (revision, files, DateTime.MinValue, true, null, null, false);
+			Revert (revision: revision, files: fileParams);
 		}
 
 		/// <summary>
@@ -1299,7 +1187,7 @@ namespace Mercurial
 		/// <param name='dryRun'>
 		/// Attempt revert without actually reverting
 		/// </param>
-		public void Revert (string revision, IEnumerable<string> files, DateTime date, bool saveBackups, string includePattern, string excludePattern, bool dryRun)
+		public void Revert (string revision, IEnumerable<string> files, DateTime date=default(DateTime), bool saveBackups=true, string includePattern=null, string excludePattern=null, bool dryRun=false)
 		{
 			var arguments = new List<string> (){ "revert" };
 			AddNonemptyStringArgument (arguments, revision, "--rev");
@@ -1327,9 +1215,9 @@ namespace Mercurial
 		/// <param name='files'>
 		/// Get text for these files
 		/// </param>
-		public IDictionary<string,string> Cat (string revision, params string[] files)
+		public IDictionary<string,string> Cat (string revision, params string[] fileParams)
 		{
-			return Cat (revision, files, null, false, null, null);
+			return Cat (revision: revision, files: fileParams);
 		}
 		
 		/// <summary>
@@ -1353,7 +1241,7 @@ namespace Mercurial
 		/// <param name='excludePattern'>
 		/// Exclude names matching the given patterns
 		/// </param>
-		public IDictionary<string,string> Cat (string revision, IEnumerable<string> files, string format, bool decode, string includePattern, string excludePattern)
+		public IDictionary<string,string> Cat (string revision, IEnumerable<string> files, string format=null, bool decode=false, string includePattern=null, string excludePattern=null)
 		{
 			if (null == files || 0 == files.Count ())
 				throw new ArgumentException ("File list cannot be empty", "files");
@@ -1371,9 +1259,7 @@ namespace Mercurial
 					realArguments.Add (file);
 					dict[file] = GetCommandOutput (realArguments, null).Output;
 					return dict;
-				},
-				dict => dict
-			);
+				});
 		}
 		
 		/// <summary>
@@ -1397,9 +1283,9 @@ namespace Mercurial
 		/// <exception cref='ArgumentException'>
 		/// Is thrown when the file list is empty
 		/// </exception>
-		public void Remove (params string[] files)
+		public void Remove (params string[] fileParams)
 		{
-			Remove (files, false, false, null, null);
+			Remove (files: fileParams);
 		}
 		
 		/// <summary>
@@ -1423,7 +1309,7 @@ namespace Mercurial
 		/// <exception cref='ArgumentException'>
 		/// Is thrown when the file list is empty
 		/// </exception>
-		public void Remove (IEnumerable<string> files, bool after, bool force, string includePattern, string excludePattern)
+		public void Remove (IEnumerable<string> files, bool after=false, bool force=false, string includePattern=null, string excludePattern=null)
 		{
 			if (null == files || 0 == files.Count ())
 				throw new ArgumentException ("File list cannot be empty", "files");
@@ -1465,7 +1351,7 @@ namespace Mercurial
 		/// <param name='excludePattern'>
 		/// Exclude names matching the given patterns
 		/// </param>
-		public IDictionary<string,bool> Resolve (IEnumerable<string> files, bool all, bool list, bool mark, bool unmark, string mergeTool, string includePattern, string excludePattern)
+		public IDictionary<string,bool> Resolve (IEnumerable<string> files, bool all=false, bool list=false, bool mark=false, bool unmark=false, string mergeTool=null, string includePattern=null, string excludePattern=null)
 		{
 			var arguments = new List<string> (){ "resolve" };
 			AddArgumentIf (arguments, all, "--all");
@@ -1483,9 +1369,7 @@ namespace Mercurial
 				(dict,line) => {
 					dict [line.Substring (2).Trim ()] = (line [0] == 'R');
 					return dict;
-				}, 
-				dict => dict
-			);
+				});
 		}
 		
 		/// <summary>
@@ -1497,7 +1381,7 @@ namespace Mercurial
 		/// <param name='revision'>
 		/// Get parents for this revision
 		/// </param>
-		public IEnumerable<Revision> Parents (string file, string revision)
+		public IEnumerable<Revision> Parents (string file=null, string revision=null)
 		{
 			var arguments = new List<string> (){ "parents", "--style", "xml" };
 			AddNonemptyStringArgument (arguments, revision, "--rev");
@@ -1841,14 +1725,12 @@ namespace Mercurial
 		{
 			Dictionary<string,string > headers = input.Split ('\n')
 				.Aggregate (new Dictionary<string,string> (),
-					(dict,line) => {
-				var tokens = line.Split (delimiters, 2, StringSplitOptions.None);
-				if (2 == tokens.Count ())
-					dict [tokens [0]] = tokens [1];
-				return dict;
-			},
-					dict => dict
-				);
+				(dict,line) => {
+					var tokens = line.Split (delimiters, 2, StringSplitOptions.None);
+					if (2 == tokens.Count ())
+						dict [tokens [0]] = tokens [1];
+					return dict;
+				});
 			return headers;
 		}
 		
@@ -1898,14 +1780,14 @@ namespace Mercurial
 		/// The collection
 		/// </param>
 		/// <param name='date'>
-		/// If this is not DateTime.MinValue, add this, prefixed by datePrefix
+		/// If this is not default(DateTime), add this, prefixed by datePrefix
 		/// </param>
 		/// <param name='datePrefix'>
 		/// The prefix to be added
 		/// </param>
 		internal static void AddFormattedDateArgument (ICollection<string> arguments, DateTime date, string datePrefix)
 		{
-			if (DateTime.MinValue != date) {
+			if (default(DateTime) != date) {
 				arguments.Add (datePrefix);
 				arguments.Add (date.ToString ("yyyy-MM-dd HH:mm:ss"));
 			}

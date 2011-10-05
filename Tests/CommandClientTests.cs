@@ -120,7 +120,7 @@ namespace Mercurial.Tests
 				client.Commit ("1");
 			}
 			
-			CommandClient.Clone (firstPath, secondPath, MercurialPath);
+			CommandClient.Clone (source: firstPath, destination: secondPath, mercurialPath: MercurialPath);
 			Assert.That (Directory.Exists (Path.Combine (secondPath, ".hg")), string.Format ("Repository was not cloned from {0} to {1}", firstPath, secondPath));
 			Assert.That (File.Exists (Path.Combine (secondPath, "foo")), "foo doesn't exist in cloned working copy");
 				
@@ -290,7 +290,7 @@ namespace Mercurial.Tests
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				CommandClient.Clone (source: firstPath, destination: secondPath, mercurialPath: MercurialPath);
 				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
@@ -328,7 +328,7 @@ namespace Mercurial.Tests
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				CommandClient.Clone (source: firstPath, destination: secondPath, mercurialPath: MercurialPath);
 				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
@@ -373,7 +373,7 @@ namespace Mercurial.Tests
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				CommandClient.Clone (source: firstPath, destination: secondPath, mercurialPath: MercurialPath);
 				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
@@ -416,7 +416,7 @@ namespace Mercurial.Tests
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				CommandClient.Clone (source: firstPath, destination: secondPath, mercurialPath: MercurialPath);
 				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
@@ -473,7 +473,7 @@ namespace Mercurial.Tests
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				CommandClient.Clone (source: firstPath, destination: secondPath, mercurialPath: MercurialPath);
 				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
@@ -511,7 +511,7 @@ namespace Mercurial.Tests
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				CommandClient.Clone (source: firstPath, destination: secondPath, mercurialPath: MercurialPath);
 				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
@@ -622,7 +622,7 @@ namespace Mercurial.Tests
 				firstClient.Commit ("1");
 			
 				// Clone repo
-				CommandClient.Clone (firstPath, secondPath, MercurialPath);
+				CommandClient.Clone (source: firstPath, destination: secondPath, mercurialPath: MercurialPath);
 				secondClient = new CommandClient (secondPath, null, null, MercurialPath);
 				Assert.AreEqual (1, secondClient.Log (null).Count, "Unexpected number of log entries");
 				
