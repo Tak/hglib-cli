@@ -407,6 +407,9 @@ namespace Mercurial
 			AddNonemptyStringArgument (arguments, user, "--user");
 			AddFormattedDateArgument (arguments, date, "--date");
 			
+			if (null != files)
+				arguments.AddRange (files);
+			
 			CommandResult result = GetCommandOutput (arguments, null);
 			if (1 != result.Result && 0 != result.Result) {
 				ThrowOnFail (result, 0, "Error committing");
