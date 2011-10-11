@@ -163,9 +163,12 @@ namespace Mercurial.Tests
 				client.Commit ("Commit all");
 				Assert.That (!client.Status ().ContainsKey ("foo"), "Default commit failed for foo");
 				
+				File.WriteAllText (Path.Combine (path, "foo"), "foo");
 				client.Add (Path.Combine (path, "bar"));
 				client.Commit ("Commit only bar", Path.Combine (path, "bar"));
 				Assert.That (!client.Status ().ContainsKey ("bar"), "Commit failed for bar");
+				Assert.That (client.Status ().ContainsKey ("foo"), "Committed unspecified file!");
+				Assert.AreEqual (Mercurial.Status.Modified, client.Status ()["foo"], "Committed unspecified file!");
 				Assert.AreEqual (2, client.Log (null).Count, "Unexpected revision count");
 			}
 		}
