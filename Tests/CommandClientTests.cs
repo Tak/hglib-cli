@@ -25,6 +25,7 @@ using System.Linq;
 using System.Text;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
 using NUnit.Framework;
 
@@ -38,6 +39,30 @@ namespace Mercurial.Tests
 		static readonly string TestRepo = "http://selenic.com/hg";
 		static List<string> garbage = new List<string> ();
 		static readonly string MercurialPath = "hg";
+		
+		[DllImport ("c")]
+		static extern int uname (IntPtr buf);
+		
+		// From Managed.Windows.Forms/XplatUI
+		static bool IsRunningOnMac ()
+		{
+			IntPtr buf = IntPtr.Zero;
+			try {
+				buf = Marshal.AllocHGlobal (8192);
+				// This is a hacktastic way of getting sysname from uname ()
+				if (uname (buf) == 0) {
+					string os = Marshal.PtrToStringAnsi (buf);
+					return (os == "Darwin");
+				}
+			} catch (Exception ex) {
+				Console.WriteLine (ex);
+			} finally {
+				if (buf != IntPtr.Zero)
+					Marshal.FreeHGlobal (buf);
+			}
+			
+			return false;
+		}
 		
 		[SetUp]
 		public void Setup ()
@@ -676,6 +701,10 @@ namespace Mercurial.Tests
 		static string GetTemporaryPath ()
 		{
 			string path = Path.Combine (Path.GetTempPath (), DateTime.UtcNow.Ticks.ToString ());
+			if (IsRunningOnMac ()) {
+				// HACK: tmp path is weird on osx
+				path = "/private" + path;
+			}
 			garbage.Add (path);
 			return path;
 		}
