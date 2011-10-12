@@ -1501,7 +1501,7 @@ namespace Mercurial
 				bytes.Add (0);
 				return bytes;
 			},
-				bytes => {
+			bytes => {
 				bytes.RemoveAt (bytes.Count - 1);
 				return bytes.ToArray ();
 			}
@@ -1515,28 +1515,33 @@ namespace Mercurial
 				commandServer.StandardInput.BaseStream.Write (argumentBuffer, 0, argumentBuffer.Length);
 				commandServer.StandardInput.BaseStream.Flush ();
 			
-				while (true) {
-					CommandMessage message = ReadMessage ();
-					if (CommandChannel.Result == message.Channel)
-						return ReadInt (message.Buffer, 0);
-					
-					if (inputs != null && inputs.ContainsKey (message.Channel)) {
-						byte[] sendBuffer = inputs [message.Channel] (ReadUint (message.Buffer, 0));
-						if (null == sendBuffer || 0 == sendBuffer.LongLength) {
-						} else {
+				try {
+					while (true) {
+						CommandMessage message = ReadMessage ();
+						if (CommandChannel.Result == message.Channel)
+							return ReadInt (message.Buffer, 0);
+						
+						if (inputs != null && inputs.ContainsKey (message.Channel)) {
+							byte[] sendBuffer = inputs [message.Channel] (ReadUint (message.Buffer, 0));
+							if (null == sendBuffer || 0 == sendBuffer.LongLength) {
+							} else {
+							}
+						}
+						if (outputs != null && outputs.ContainsKey (message.Channel)) {
+							if (message.Buffer.Length > int.MaxValue) {
+							// .NET hates uints
+								int firstPart = message.Buffer.Length / 2;
+								int secondPart = message.Buffer.Length - firstPart;
+								outputs [message.Channel].Write (message.Buffer, 0, firstPart);
+								outputs [message.Channel].Write (message.Buffer, firstPart, secondPart);
+							} else {
+								outputs [message.Channel].Write (message.Buffer, 0, message.Buffer.Length);
+							}
 						}
 					}
-					if (outputs != null && outputs.ContainsKey (message.Channel)) {
-						if (message.Buffer.Length > int.MaxValue) {
-						// .NET hates uints
-							int firstPart = message.Buffer.Length / 2;
-							int secondPart = message.Buffer.Length - firstPart;
-							outputs [message.Channel].Write (message.Buffer, 0, firstPart);
-							outputs [message.Channel].Write (message.Buffer, firstPart, secondPart);
-						} else {
-							outputs [message.Channel].Write (message.Buffer, 0, message.Buffer.Length);
-						}
-					}
+				} catch (Exception ex) {
+					Console.WriteLine (ex);
+					return -1;
 				}
 			}// lock commandServer
 		}
