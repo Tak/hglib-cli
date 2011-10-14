@@ -611,6 +611,26 @@ namespace Mercurial.Tests
 		}
 		
 		[Test]
+		public void TestCatMore ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			Console.WriteLine (Environment.CurrentDirectory);
+			CommandClient.Initialize (path, MercurialPath);
+			File.Copy ("../../../Mercurial/CommandClient.cs", file);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
+				client.Add (file);
+				client.Commit ("Commit all");
+				Assert.That (!client.Status ().ContainsKey ("foo"), "Default commit failed for foo");
+				
+				var contents = client.Cat (null, file);
+				Assert.AreEqual (1, contents.Count, "Unexpected size of file set");
+				Assert.That (contents.ContainsKey (file), "foo not in file set");
+				Assert.AreEqual (File.ReadAllText (file), contents [file]);
+			}
+		}
+		
+		[Test]
 		public void TestRemove ()
 		{
 			string path = GetTemporaryPath ();
