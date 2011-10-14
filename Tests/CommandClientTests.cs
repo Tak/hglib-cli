@@ -23,6 +23,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
@@ -46,6 +47,8 @@ namespace Mercurial.Tests
 		// From Managed.Windows.Forms/XplatUI
 		static bool IsRunningOnMac ()
 		{
+			if (IsRunningOnWindows ()) return false;
+			
 			IntPtr buf = IntPtr.Zero;
 			try {
 				buf = Marshal.AllocHGlobal (8192);
@@ -62,6 +65,11 @@ namespace Mercurial.Tests
 			}
 			
 			return false;
+		}
+		
+		static bool IsRunningOnWindows ()
+		{
+			return (Path.DirectorySeparatorChar == '\\' && Environment.NewLine == "\r\n");
 		}
 		
 		[SetUp]
@@ -144,8 +152,12 @@ namespace Mercurial.Tests
 				client.Add (file);
 				client.Commit ("1");
 			}
-			
+			try {
 			CommandClient.Clone (source: firstPath, destination: secondPath, mercurialPath: MercurialPath);
+			} catch (Exception ex) {
+				Console.WriteLine (ex);
+				Assert.That (false, ex.Message);
+			}
 			Assert.That (Directory.Exists (Path.Combine (secondPath, ".hg")), string.Format ("Repository was not cloned from {0} to {1}", firstPath, secondPath));
 			Assert.That (File.Exists (Path.Combine (secondPath, "foo")), "foo doesn't exist in cloned working copy");
 				
