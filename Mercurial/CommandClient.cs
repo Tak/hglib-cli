@@ -1256,13 +1256,15 @@ namespace Mercurial
 			AddNonemptyStringArgument (arguments, includePattern, "--include");
 			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
 			
-			return files.Aggregate (new Dictionary<string,string> (),
+			var result = files.Aggregate (new Dictionary<string,string> (),
 				(dict,file) => {
 					var realArguments = new List<string> (arguments);
 					realArguments.Add (file);
 					dict[file] = GetCommandOutput (realArguments, null).Output;
 					return dict;
 				});
+			result.Count ();
+			return result;
 		}
 		
 		/// <summary>
@@ -1368,11 +1370,13 @@ namespace Mercurial
 				arguments.AddRange (files);
 			
 			CommandResult result = GetCommandOutput (arguments, null);
-			return result.Output.Split (new[]{'\n'}, StringSplitOptions.RemoveEmptyEntries).Aggregate (new Dictionary<string,bool> (),
+			var statuses = result.Output.Split (new[]{'\n'}, StringSplitOptions.RemoveEmptyEntries).Aggregate (new Dictionary<string,bool> (),
 				(dict,line) => {
 					dict [line.Substring (2).Trim ()] = (line [0] == 'R');
 					return dict;
 				});
+			statuses.Count ();
+			return statuses;
 		}
 		
 		/// <summary>
@@ -1425,10 +1429,10 @@ namespace Mercurial
 		CommandMessage ReadMessage ()
 		{
 			byte[] header = new byte[MercurialHeaderLength];
-			int bytesRead = 0;
+			long bytesRead = 0;
 			
 			try {
-				bytesRead = commandServer.StandardOutput.BaseStream.Read (header, 0, MercurialHeaderLength);
+				bytesRead = ReadAll (commandServer.StandardOutput.BaseStream, header, 0, MercurialHeaderLength);
 			} catch (Exception ex) {
 				throw new ServerException ("Error reading from command server", ex);
 			}
@@ -1451,18 +1455,60 @@ namespace Mercurial
 					int firstPart = (int)(messageLength / 2);
 					int secondPart = (int)(messageLength - firstPart);
 				
-					commandServer.StandardOutput.BaseStream.Read (messageBuffer, 0, firstPart);
-					commandServer.StandardOutput.BaseStream.Read (messageBuffer, firstPart, secondPart);
+					bytesRead = ReadAll (commandServer.StandardOutput.BaseStream, messageBuffer, 0, firstPart);
+					if (bytesRead == firstPart) {
+						bytesRead += ReadAll (commandServer.StandardOutput.BaseStream, messageBuffer, firstPart, secondPart);
+					}
 				} else {
-					commandServer.StandardOutput.BaseStream.Read (messageBuffer, 0, (int)messageLength);
+					bytesRead = ReadAll (commandServer.StandardOutput.BaseStream, messageBuffer, 0, (int)messageLength);
 				}
 			} catch (Exception ex) {
 				throw new ServerException ("Error reading from command server", ex);
 			}
-				
+			
+			if (bytesRead != messageLength) {
+				throw new ServerException (string.Format ("Error reading from command server: Expected {0} bytes, read {1}", messageLength, bytesRead));
+			}
+			
 			CommandMessage message = new CommandMessage (CommandChannelFromFirstByte (header), messageBuffer);
 			// Console.WriteLine ("READ: {0} {1}", message, message.Message);
 			return message;
+		}
+		
+		/// <summary>
+		/// Reads all the requested bytes from a stream into a buffer
+		/// </summary>
+		/// <returns>
+		/// The number of bytes read.
+		/// </returns>
+		/// <param name='stream'>
+		/// The stream to read.
+		/// </param>
+		/// <param name='buffer'>
+		/// The buffer into which to read.
+		/// </param>
+		/// <param name='offset'>
+		/// The beginning buffer offset to which to write.
+		/// </param>
+		/// <param name='length'>
+		/// The number of bytes to read.
+		/// </param>
+		/// <exception cref='ArgumentNullException'>
+		/// Is thrown when an argument passed to a method is invalid because it is <see langword="null" /> .
+		/// </exception>
+		static int ReadAll (Stream stream, byte[] buffer, int offset, int length)
+		{
+			if (null == stream)
+				throw new ArgumentNullException ("stream");
+			
+			int remaining = length;
+			int read = 0;
+			
+			for (; remaining > 0 ; offset += read, remaining -= read) {
+				read = stream.Read (buffer, offset, remaining);
+			}
+			
+			return length - remaining;
 		}
 		
 		/// <summary>
@@ -1505,7 +1551,7 @@ namespace Mercurial
 				bytes.RemoveAt (bytes.Count - 1);
 				return bytes.ToArray ();
 			}
-			);
+			).ToArray ();
 			
 			byte[] lengthBuffer = BitConverter.GetBytes (IPAddress.HostToNetworkOrder (argumentBuffer.Length));
 			
@@ -1540,7 +1586,13 @@ namespace Mercurial
 						}
 					}
 				} catch (Exception ex) {
+//					Console.WriteLine (commandServer.StandardOutput.ReadToEnd ());
+//					Console.WriteLine (commandServer.StandardError.ReadToEnd ());
+					Console.WriteLine (string.Join (" ", command.ToArray ()));
 					Console.WriteLine (ex);
+					commandServer.StandardOutput.BaseStream.Flush ();
+					commandServer.StandardError.BaseStream.Flush ();
+					throw;
 					return -1;
 				}
 			}// lock commandServer
@@ -1752,6 +1804,7 @@ namespace Mercurial
 						dict [tokens [0]] = tokens [1];
 					return dict;
 				});
+			headers.Count ();
 			return headers;
 		}
 		
