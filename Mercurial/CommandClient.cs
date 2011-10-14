@@ -145,6 +145,7 @@ namespace Mercurial
 			commandServerInfo.RedirectStandardOutput = 
 			commandServerInfo.RedirectStandardError = true;
 			commandServerInfo.UseShellExecute = false;
+			commandServerInfo.CreateNoWindow = true;
 			
 			try {
 				// Console.WriteLine ("Launching command server with: {0} {1}", mercurialPath, arguments.ToString ());
@@ -169,7 +170,10 @@ namespace Mercurial
 		{
 			if (string.IsNullOrEmpty (mercurialPath))
 				mercurialPath = DefaultMercurialPath;
-			Process hg = Process.Start (mercurialPath, string.Format ("init {0}", destination));
+			ProcessStartInfo psi =  new ProcessStartInfo (mercurialPath, string.Format ("init {0}", destination)) {
+				CreateNoWindow = true,
+			};
+			Process hg = Process.Start (psi);
 			hg.WaitForExit (5000);
 			if (!hg.HasExited || 0 != hg.ExitCode)
 				throw new CommandException (string.Format ("Error creating repository at {0}", destination));
@@ -228,11 +232,17 @@ namespace Mercurial
 			arguments.Add (source);
 			AddArgumentIf (arguments, !string.IsNullOrEmpty (destination), destination);
 			
-			Process hg = Process.Start (mercurialPath, string.Join (" ", arguments.ToArray ()));
+			ProcessStartInfo psi = new ProcessStartInfo (mercurialPath, string.Join (" ", arguments.ToArray ())) {
+				RedirectStandardOutput = true,
+				RedirectStandardError = true,
+				UseShellExecute = false,
+				CreateNoWindow = true,
+			};
+			Process hg = Process.Start (psi);
 			hg.WaitForExit ();
 			
 			if (0 != hg.ExitCode)
-				throw new CommandException (string.Format ("Error cloning {0}", source));
+				throw new CommandException (string.Format ("Error cloning {0}: {1}", source, hg.StandardOutput.ReadToEnd () + hg.StandardError.ReadToEnd ()));
 		}
 		
 		/// <summary>
