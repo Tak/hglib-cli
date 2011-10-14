@@ -1593,7 +1593,6 @@ namespace Mercurial
 					commandServer.StandardOutput.BaseStream.Flush ();
 					commandServer.StandardError.BaseStream.Flush ();
 					throw;
-					return -1;
 				}
 			}// lock commandServer
 		}
