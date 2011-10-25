@@ -41,7 +41,7 @@ namespace Mercurial.Tests
 		static List<string> garbage = new List<string> ();
 		static readonly string MercurialPath = "hg";
 		
-		[DllImport ("c")]
+		[DllImport ("libc")]
 		static extern int uname (IntPtr buf);
 		
 		// From Managed.Windows.Forms/XplatUI
