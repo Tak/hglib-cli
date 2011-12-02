@@ -590,7 +590,8 @@ namespace Mercurial
 			AddArgumentIf (arguments, !string.IsNullOrEmpty (source), source);
 			
 			CommandResult result = GetCommandOutput (arguments, null);
-			ThrowOnFail (result, 0, "Error getting incoming");
+			if (0 != result.Result && 1 != result.Result)
+				throw new CommandException ("Error getting incoming", result);
 			
 			try {
 				int index = result.Output.IndexOf ("<?xml");
