@@ -37,7 +37,7 @@ namespace Mercurial.Tests
 	[TestFixture()]
 	public class CommandClientTests
 	{
-		static readonly string TestRepo = "http://selenic.com/hg";
+		static readonly string TestRepo = "https://bitbucket.org/TakUnity/monodevelop-hg";
 		static List<string> garbage = new List<string> ();
 		static readonly string MercurialPath = "hg";
 		
@@ -131,7 +131,7 @@ namespace Mercurial.Tests
 		}
 		
 		[Test]
-		[Ignore("Don't thrash selenic")]
+		[Ignore("Don't thrash bitbucket")]
 		public void TestCloneRemote ()
 		{
 			string path = GetTemporaryPath ();
