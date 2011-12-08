@@ -333,10 +333,11 @@ namespace Mercurial
 		/// <returns>
 		/// A dictionary mapping each file to its Status
 		/// </returns>
-		public IDictionary<string,Status> Status (IEnumerable<string> files, Status onlyFilesWithThisStatus=Mercurial.Status.Default, bool showCopiedSources=false, string fromRevision=null, string onlyRevision=null, string includePattern=null, string excludePattern=null, bool recurseSubRepositories=false)
+		public IDictionary<string,Status> Status (IEnumerable<string> files, bool quiet=false, Status onlyFilesWithThisStatus=Mercurial.Status.Default, bool showCopiedSources=false, string fromRevision=null, string onlyRevision=null, string includePattern=null, string excludePattern=null, bool recurseSubRepositories=false)
 		{
 			var arguments = new List<string> (){ "status" };
 			
+			AddArgumentIf (arguments, quiet, "--quiet");
 			if (Mercurial.Status.Default != onlyFilesWithThisStatus) {
 				arguments.Add (ArgumentForStatus (onlyFilesWithThisStatus));
 			}
