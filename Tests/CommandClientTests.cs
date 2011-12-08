@@ -729,6 +729,35 @@ namespace Mercurial.Tests
 				Assert.AreEqual (1, parents.Count (), "Unexpected number of parents");
 			}
 		}
+		
+		[Test]
+		public void TestStatus ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			string unknownFile = Path.Combine (path, "bar");
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
+				File.WriteAllText (file, string.Empty);
+				File.WriteAllText (unknownFile, string.Empty);
+				client.Add (file);
+				IDictionary<string,Status> statuses = client.Status (path);
+				Assert.That (statuses.ContainsKey ("foo"), "foo not found in status");
+				Assert.That (statuses.ContainsKey ("bar"), "bar not found in status");
+				Assert.AreEqual (Status.Added, statuses ["foo"], "Incorrect status for foo");
+				Assert.AreEqual (statuses ["bar"], Status.Unknown, "Incorrect status for bar");
+				
+				statuses = client.Status (new[]{path}, quiet: true);
+				Assert.That (statuses.ContainsKey ("foo"), "foo not found in status");
+				Assert.AreEqual (Status.Added, statuses ["foo"], "Incorrect status for foo");
+				Assert.That (!statuses.ContainsKey ("bar"), "bar listed in quiet status output");
+				
+				statuses = client.Status (new[]{path}, onlyFilesWithThisStatus: Status.Added);
+				Assert.That (statuses.ContainsKey ("foo"), "foo not found in status");
+				Assert.AreEqual (Status.Added, statuses ["foo"], "Incorrect status for foo");
+				Assert.That (!statuses.ContainsKey ("bar"), "bar listed in added-only status output");
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{
