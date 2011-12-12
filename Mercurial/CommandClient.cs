@@ -1423,6 +1423,24 @@ namespace Mercurial
 			});
 		}
 		
+		/// <summary>
+		/// Rollback the last transaction (dangerous!)
+		/// </summary>
+		/// <param name='force'>
+		/// Whether to ignore safety measures
+		/// </param>
+		/// <returns>
+		/// Whether the rollback succeeded
+		/// </returns>
+		public bool Rollback (bool force=false)
+		{
+			var arguments = new List<string> (){ "rollback" };
+			AddArgumentIf (arguments, force, "--force");
+			
+			CommandResult result = GetCommandOutput (arguments, null);
+			return (result.Result == 0);
+		}
+		
 		#region Plumbing
 		
 		void Handshake ()
