@@ -758,6 +758,25 @@ namespace Mercurial.Tests
 				Assert.That (!statuses.ContainsKey ("bar"), "bar listed in added-only status output");
 			}
 		}
+		
+		[Test]
+		public void TestRollback ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
+				File.WriteAllText (file, string.Empty);
+				client.Add (file);
+				client.Commit (file);
+				File.WriteAllText (file, file);
+				client.Commit (file);
+				Assert.AreEqual (2, client.Log (null).Count, "Unexpected history length");
+				Assert.That (client.Rollback ());
+				Assert.AreEqual (1, client.Log (null).Count, "Unexpected history length after rollback");
+				Assert.AreEqual (Mercurial.Status.Modified, client.Status (file) ["foo"], "Unexpected file status after rollback");
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{
