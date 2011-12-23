@@ -1441,6 +1441,36 @@ namespace Mercurial
 			return (result.Result == 0);
 		}
 		
+		public static readonly Dictionary<ArchiveType,string> archiveTypeToArgumentStringMap = new Dictionary<ArchiveType,string> () {
+			{ ArchiveType.Default, string.Empty },
+			{ ArchiveType.Directory, "files" },
+			{ ArchiveType.Tar, "tar" },
+			{ ArchiveType.TarBzip2, "tbz2" },
+			{ ArchiveType.TarGzip, "tgz" },
+			{ ArchiveType.UncompressedZip, "uzip" },
+			{ ArchiveType.Zip, "zip" },
+		};
+		
+		public void Archive (string destination, string revision=null, string prefix=null, ArchiveType type=ArchiveType.Default, bool decode=true, bool recurseSubRepositories=false, string includePattern=null, string excludePattern=null)
+		{
+			if (string.IsNullOrEmpty (destination)) {
+				throw new ArgumentException ("Destination cannot be empty", "destination");
+			}
+			
+			var arguments = new List<string> (){ "archive" };
+			AddNonemptyStringArgument (arguments, revision, "--rev");
+			AddNonemptyStringArgument (arguments, prefix, "--prefix");
+			AddNonemptyStringArgument (arguments, archiveTypeToArgumentStringMap [type], "--type");
+			AddArgumentIf (arguments, !decode, "--no-decode");
+			AddArgumentIf (arguments, recurseSubRepositories, "--subrepos");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			
+			arguments.Add (destination);
+			
+			ThrowOnFail (GetCommandOutput (arguments, null), 0, string.Format ("Error archiving to {0}", destination));
+		}
+		
 		#region Plumbing
 		
 		void Handshake ()
