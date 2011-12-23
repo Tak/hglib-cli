@@ -777,6 +777,32 @@ namespace Mercurial.Tests
 				Assert.AreEqual (Mercurial.Status.Modified, client.Status (file) ["foo"], "Unexpected file status after rollback");
 			}
 		}
+		
+		[Test]
+		public void VerifyArchiveTypeCoverage ()
+		{
+			foreach (ArchiveType type in Enum.GetValues (typeof (ArchiveType))) {
+				Console.WriteLine (Mercurial.CommandClient.archiveTypeToArgumentStringMap [type]);
+			}
+		}
+		
+		[Test]
+		public void TestArchive ()
+		{
+			string path = GetTemporaryPath ();
+			string archivePath = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
+				File.WriteAllText (file, string.Empty);
+				client.Add (file);
+				client.Commit (file);
+				client.Archive (archivePath);
+				Assert.That (Directory.Exists (archivePath));
+				Assert.That (!Directory.Exists (Path.Combine (archivePath, ".hg")));
+				Assert.That (File.Exists (Path.Combine (archivePath, "foo")));
+			}
+		}
 
 		static string GetTemporaryPath ()
 		{
