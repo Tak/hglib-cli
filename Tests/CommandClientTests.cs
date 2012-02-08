@@ -604,6 +604,24 @@ namespace Mercurial.Tests
 		}
 		
 		[Test]
+		public void TestRename ()
+		{
+			string path = GetTemporaryPath ();
+			string file = Path.Combine (path, "foo");
+			CommandClient.Initialize (path, MercurialPath);
+			using (var client = new CommandClient (path, null, null, MercurialPath)) {
+				File.WriteAllText (file, string.Empty);
+				client.Add (file);
+				client.Commit ("Commit all");
+				Assert.That (!client.Status ().ContainsKey ("foo"), "Default commit failed for foo");
+
+				client.Rename ("foo", "foo2");
+				Assert.That (client.Status ().ContainsKey ("foo"), "Failed to rename file");
+				Assert.That (client.Status ().ContainsKey ("foo2"), "Failed to rename file");
+			}
+		}
+
+		[Test]
 		public void TestCat ()
 		{
 			string path = GetTemporaryPath ();

@@ -1222,6 +1222,40 @@ namespace Mercurial
 		}
 		
 		/// <summary>
+		/// Rename a file
+		/// </summary>
+		/// <param name='oldFileName'>
+		/// The old (or existing) file name
+		/// </param>
+		/// <param name='newFileName'>
+		/// The new file name
+		/// </param>
+		/// <param name='force'>
+		/// Force the rename
+		/// </param>
+		/// <param name='includePattern'>
+		/// Include names matching the given patterns
+		/// </param>
+		/// <param name='excludePattern'>
+		/// Exclude names matching the given patterns
+		/// </param>
+		/// <param name='dryRun'>
+		/// Attempt revert without actually reverting
+		/// </param>
+		public void Rename (string oldFileName, string newFileName, bool force=false, string includePattern=null, string excludePattern=null, bool dryRun=false)
+		{
+			var arguments = new List<string> () { "rename" };
+			AddArgumentIf (arguments, force, "--force");
+			AddNonemptyStringArgument (arguments, includePattern, "--include");
+			AddNonemptyStringArgument (arguments, excludePattern, "--exclude");
+			AddArgumentIf (arguments, dryRun, "--dry-run");
+			arguments.Add (oldFileName);
+			arguments.Add (newFileName);
+
+			ThrowOnFail (GetCommandOutput (arguments, null), 0, "Error renaming");
+		}
+
+		/// <summary>
 		/// Get the text of a set of files
 		/// </summary>
 		/// <param name='revision'>
