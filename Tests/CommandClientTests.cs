@@ -616,8 +616,14 @@ namespace Mercurial.Tests
 				Assert.That (!client.Status ().ContainsKey ("foo"), "Default commit failed for foo");
 
 				client.Rename ("foo", "foo2");
-				Assert.That (client.Status ().ContainsKey ("foo"), "Failed to rename file");
-				Assert.That (client.Status ().ContainsKey ("foo2"), "Failed to rename file");
+				IDictionary<string,Status > statuses = client.Status ();
+				statuses = client.Status (new[]{path}, quiet: false);
+				Assert.AreEqual (Status.Removed, statuses ["foo"], string.Format ("Incorrect status for foo: {0}", statuses ["foo"]));
+				Assert.AreEqual (Status.Added, statuses ["foo2"], string.Format ("Incorrect status for foo2: {0}", statuses ["foo2"]));
+				
+				client.Commit ("Commit rename");
+				Assert.That (!client.Status ().ContainsKey ("foo"), "Failed to rename file");
+				Assert.That (!client.Status ().ContainsKey ("foo2"), "Failed to rename file");
 			}
 		}
 
