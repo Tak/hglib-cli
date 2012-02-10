@@ -1240,7 +1240,7 @@ namespace Mercurial
 		/// Exclude names matching the given patterns
 		/// </param>
 		/// <param name='dryRun'>
-		/// Attempt revert without actually reverting
+		/// Attempt rename without actually renaming
 		/// </param>
 		public void Rename (string oldFileName, string newFileName, bool force=false, string includePattern=null, string excludePattern=null, bool dryRun=false)
 		{
