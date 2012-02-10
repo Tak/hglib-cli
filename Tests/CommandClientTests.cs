@@ -624,6 +624,8 @@ namespace Mercurial.Tests
 				client.Commit ("Commit rename");
 				Assert.That (!client.Status ().ContainsKey ("foo"), "Failed to rename file");
 				Assert.That (!client.Status ().ContainsKey ("foo2"), "Failed to rename file");
+				Assert.That (!File.Exists (file));
+				Assert.That (File.Exists (Path.Combine (path, "foo2")));
 			}
 		}
 
