@@ -171,6 +171,7 @@ namespace Mercurial
 			if (string.IsNullOrEmpty (mercurialPath))
 				mercurialPath = DefaultMercurialPath;
 			ProcessStartInfo psi =  new ProcessStartInfo (mercurialPath, string.Format ("init {0}", destination)) {
+				UseShellExecute = false,
 				CreateNoWindow = true,
 			};
 			Process hg = Process.Start (psi);
