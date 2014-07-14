@@ -1,0 +1,5 @@
+relre:.*\.orig
+glob:**\obj\**\*.*
+glob:**\bin\**\*.*
+glob:*.user
+glob:*.suo
