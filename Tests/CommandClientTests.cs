@@ -237,8 +237,8 @@ namespace Mercurial.Tests
 			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (file, "1");
 				client.Add (file);
-				client.Commit ("1", null, false, false, null, null, null, DateTime.MinValue, "user");
-				Assert.AreEqual ("user 0: 1", client.Annotate (null, file));
+				client.Commit ("1", null, false, false, null, null, null, null, "user");
+				Assert.AreEqual ("user 0: 1\n", client.Annotate (null, file));
 			}
 		}
 		
@@ -253,7 +253,7 @@ namespace Mercurial.Tests
 			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (file, "1\n");
 				client.Add (file);
-				client.Commit ("1", null, false, false, null, null, null, DateTime.MinValue, "user");
+				client.Commit ("1", null, false, false, null, null, null, null, "user");
 				File.WriteAllText (file, "2\n");
 				diffText = client.Diff (null, file);
 			}
@@ -488,7 +488,7 @@ namespace Mercurial.Tests
 			using (var client = new CommandClient (path, null, null, MercurialPath)) {
 				File.WriteAllText (file, "1");
 				client.Add (file);
-				client.Commit ("1", null, false, false, null, null, null, DateTime.MinValue, "user");
+				client.Commit ("1", null, false, false, null, null, null, null, "user");
 				summary = client.Summary (false);
 			}
 			
@@ -832,7 +832,8 @@ namespace Mercurial.Tests
 
 		static string GetTemporaryPath ()
 		{
-			string path = Path.Combine (Path.GetTempPath (), DateTime.UtcNow.Ticks.ToString ());
+			string dirName = string.Format("Mercuria.Tests.{0}", Path.GetRandomFileName());
+			string path = Path.Combine (Path.GetTempPath (), dirName);
 			if (IsRunningOnMac ()) {
 				// HACK: tmp path is weird on osx
 				path = "/private" + path;
