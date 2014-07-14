@@ -407,7 +407,7 @@ namespace Mercurial
 		/// <param name='user'>
 		/// Record this user as the committer
 		/// </param>
-		public void Commit (string message, IEnumerable<string> files, bool addAndRemoveUnknowns=false, bool closeBranch=false, string includePattern=null, string excludePattern=null, string messageLog=null, DateTime date=default(DateTime), string user=null)
+		public void Commit (string message, IEnumerable<string> files, bool addAndRemoveUnknowns=false, bool closeBranch=false, string includePattern=null, string excludePattern=null, string messageLog=null, DateTime? date= null, string user=null)
 		{
 			var arguments = new List<string> (){ "commit" };
 			AddNonemptyStringArgument (arguments, message, "--message");
@@ -502,7 +502,7 @@ namespace Mercurial
 		/// <returns>
 		/// An ordered list of Revisions
 		/// </returns>
-		public IList<Revision> Log (string revisionRange, IEnumerable<string> files, bool followAcrossCopy=false, bool followFirstMergeParent=false, DateTime fromDate=default(DateTime), DateTime toDate=default(DateTime), bool showCopiedFiles=false, string searchText=null, bool showRemoves=false, bool onlyMerges=false, bool excludeMerges=false, string user=null, string branch=null, string pruneRevisions=null, int limit=0, string includePattern=null, string excludePattern=null)
+		public IList<Revision> Log (string revisionRange, IEnumerable<string> files, bool followAcrossCopy=false, bool followFirstMergeParent=false, DateTime? fromDate= null, DateTime? toDate = null, bool showCopiedFiles=false, string searchText=null, bool showRemoves=false, bool onlyMerges=false, bool excludeMerges=false, string user=null, string branch=null, string pruneRevisions=null, int limit=0, string includePattern=null, string excludePattern=null)
 		{
 			var arguments = new List<string> (){ "log", "--style", "xml" };
 			AddNonemptyStringArgument (arguments, revisionRange, "--rev");
@@ -522,10 +522,10 @@ namespace Mercurial
 				arguments.Add ("--limit");
 				arguments.Add (limit.ToString ());
 			}
-			if (default(DateTime) != fromDate && default(DateTime) != toDate) {
+			if (fromDate != null && toDate != null) {
 				arguments.Add (string.Format ("{0} to {1}",
-				                              fromDate.ToString ("yyyy-MM-dd HH:mm:ss"),
-				                              toDate.ToString ("yyyy-MM-dd HH:mm:ss")));
+				                              fromDate.Value.ToString ("yyyy-MM-dd HH:mm:ss"),
+				                              toDate.Value.ToString ("yyyy-MM-dd HH:mm:ss")));
 			}
 			if (null != files)
 				arguments.AddRange (files);
@@ -1131,7 +1131,7 @@ namespace Mercurial
 		/// true if the update succeeded with no unresolved files, 
 		/// false if there are unresolved files
 		/// </returns>
-		public bool Update (string revision, bool discardUncommittedChanges=false, bool updateAcrossBranches=false, DateTime toDate=default(DateTime))
+		public bool Update (string revision, bool discardUncommittedChanges=false, bool updateAcrossBranches=false, DateTime? toDate = null)
 		{
 			var arguments = new List<string> (){ "update" };
 			AddArgumentIf (arguments, discardUncommittedChanges, "--clean");
@@ -1203,7 +1203,7 @@ namespace Mercurial
 		/// <param name='dryRun'>
 		/// Attempt revert without actually reverting
 		/// </param>
-		public void Revert (string revision, IEnumerable<string> files, DateTime date=default(DateTime), bool saveBackups=true, string includePattern=null, string excludePattern=null, bool dryRun=false)
+		public void Revert (string revision, IEnumerable<string> files, DateTime? date = null, bool saveBackups=true, string includePattern=null, string excludePattern=null, bool dryRun=false)
 		{
 			var arguments = new List<string> (){ "revert" };
 			AddNonemptyStringArgument (arguments, revision, "--rev");
@@ -1953,11 +1953,11 @@ namespace Mercurial
 		/// <param name='datePrefix'>
 		/// The prefix to be added
 		/// </param>
-		internal static void AddFormattedDateArgument (ICollection<string> arguments, DateTime date, string datePrefix)
+		internal static void AddFormattedDateArgument (ICollection<string> arguments, DateTime? date, string datePrefix)
 		{
-			if (default(DateTime) != date) {
+			if (date != null) {
 				arguments.Add (datePrefix);
-				arguments.Add (date.ToString ("yyyy-MM-dd HH:mm:ss"));
+				arguments.Add (date.Value.ToString ("yyyy-MM-dd HH:mm:ss"));
 			}
 		}
 
