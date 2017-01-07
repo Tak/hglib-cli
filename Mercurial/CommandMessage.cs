@@ -47,7 +47,7 @@ namespace Mercurial
 		public string Message {
 			get {
 				if (null != _message) return _message;
-				return _message = new string (UTF8Encoding.UTF8.GetChars (Buffer));
+				return _message = new string (CommandClient.Codec.GetChars (Buffer));
 			}
 		}
 		

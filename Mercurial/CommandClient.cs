@@ -101,7 +101,11 @@ namespace Mercurial
 		}
 		string _version;
 		static Regex versionRegex = new Regex (@"^[^\)]+\([^\d]+(?<major>\d)\.(?<minor>\d)((.(?<trivial>\d))|(?<additional>.*))\)", RegexOptions.Compiled);
-		
+
+		internal static Encoding Codec { get { return _codec; } }
+		// TODO: Respect the command server's desired encoding
+		static UTF8Encoding _codec = new UTF8Encoding (false); // NO BOM!
+
 		/// <summary>
 		/// Launch a new command server
 		/// </summary>
@@ -137,16 +141,24 @@ namespace Mercurial
 				));
 			}
 			
-			ProcessStartInfo commandServerInfo = new ProcessStartInfo (mercurialPath, arguments.ToString ().Trim ());
+			ProcessStartInfo commandServerInfo = new ProcessStartInfo (mercurialPath, arguments.ToString ().Trim ()) {
+				RedirectStandardInput = true,
+				RedirectStandardOutput = true,
+				RedirectStandardError = true,
+				UseShellExecute = false,
+				CreateNoWindow = true,
+				StandardOutputEncoding = _codec,
+				StandardErrorEncoding = _codec,
+			};
+
 			if (null != encoding) {
 				commandServerInfo.EnvironmentVariables [MercurialEncodingKey] = encoding;
 			}
-			commandServerInfo.RedirectStandardInput =
-			commandServerInfo.RedirectStandardOutput = 
-			commandServerInfo.RedirectStandardError = true;
-			commandServerInfo.UseShellExecute = false;
-			commandServerInfo.CreateNoWindow = true;
-			
+
+			// If we don't set this, .net is free to create the stdin stream with whatever encoding it wants,
+			// including utf8 WITH BOM!
+			Console.InputEncoding = _codec;
+
 			try {
 				// Console.WriteLine ("Launching command server with: {0} {1}", mercurialPath, arguments.ToString ());
 				commandServer = Process.Start (commandServerInfo);
@@ -1634,11 +1646,11 @@ namespace Mercurial
 			if (null == command || 0 == command.Count)
 				throw new ArgumentException ("Command must not be empty", "command");
 			
-			byte[] commandBuffer = UTF8Encoding.UTF8.GetBytes ("runcommand\n");
+			byte[] commandBuffer = _codec.GetBytes ("runcommand\n");
 			byte[] argumentBuffer;
 			
 			argumentBuffer = command.Aggregate (new List<byte> (), (bytes,arg) => {
-				bytes.AddRange (UTF8Encoding.UTF8.GetBytes (arg));
+				bytes.AddRange (_codec.GetBytes (arg));
 				bytes.Add (0);
 				return bytes;
 			},
@@ -1718,8 +1730,8 @@ namespace Mercurial
 			};
 			
 			int result = RunCommand (command, outputs, inputs);
-			return new CommandResult (UTF8Encoding.UTF8.GetString (output.GetBuffer (), 0, (int)output.Length),
-			                          UTF8Encoding.UTF8.GetString (error.GetBuffer (), 0, (int)error.Length),
+			return new CommandResult (_codec.GetString (output.GetBuffer (), 0, (int)output.Length),
+			                          _codec.GetString (error.GetBuffer (), 0, (int)error.Length),
 			                          result);
 		}
 		
