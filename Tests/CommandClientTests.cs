@@ -281,11 +281,12 @@ namespace Mercurial.Tests
 				client.Commit ("2");
 				diffText = client.Export ("1");
 			}
-			string[] lines = diffText.Split (new[]{"\n"}, StringSplitOptions.RemoveEmptyEntries);
-			Assert.AreEqual (12, lines.Length, "Unexpected diff length");
-			Assert.AreEqual ("@@ -1,1 +1,1 @@", lines [9]);
-			Assert.AreEqual ("-1", lines [10]);
-			Assert.AreEqual ("+2", lines [11]);
+			string[] lines = diffText.Split (new[]{ "\n" }, StringSplitOptions.RemoveEmptyEntries)
+				.Where (line => !line.StartsWith ("#")).ToArray();
+			Assert.AreEqual (7, lines.Count(), "Unexpected diff length");
+			Assert.AreEqual ("@@ -1,1 +1,1 @@", lines [4]);
+			Assert.AreEqual ("-1", lines [5]);
+			Assert.AreEqual ("+2", lines [6]);
 		}
 		
 		[Test]
